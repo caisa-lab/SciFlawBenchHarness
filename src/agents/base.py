@@ -1,4 +1,4 @@
-from core.config import ModelConfig
+from core.config import ModelConfig 
 from core.events import EventWatcher
 
 from agents.prompts import  load_prompt_templates
@@ -9,7 +9,7 @@ from tools.definitions import  tool_registry
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 from smolagents import ToolCallingAgent, CodeAgent, Tool, LogLevel
 
@@ -24,9 +24,13 @@ class BuiltAgent:
     agent: CodeAgent | ToolCallingAgent
     definition: AgentDef
 
-
 # TODO: make this thing work for multi agent setups via specifying children and parents
-def build_agent(agent_id: str , model_conf: ModelConfig, watcher: EventWatcher, extra_tools: List[ToolDef | str]) -> BuiltAgent:
+def build_agent(
+        agent_id: str, 
+        model_conf: ModelConfig, 
+        watcher: EventWatcher, 
+        extra_tools: List[ToolDef | str],
+        ) -> BuiltAgent:
     """
     builds an agent from the specified agent_id and model conf along with the associated watcher class
     note this builds all of its tools and its model configuration here 
@@ -35,20 +39,27 @@ def build_agent(agent_id: str , model_conf: ModelConfig, watcher: EventWatcher, 
         agent_id (str): string specifying the agent / agentic setup to be built 
         model_conf (ModelConfig): description of what is needed to build the model associated with this agent
         watcher (EventWatcher): the watcher associated with this agent, its model instancce and its tools
+        extra_tools (List[ToolDef | str]): definition of extra_tools to be passed on a task basis
 
     """
     model = build_model(model_conf, watcher)
     definition = agent_registry.create(agent_id)
     tools = [tool_registry.create(t.tool_name, watcher=watcher, **t.kwargs) for t in definition.tools + extra_tools] # later add multi agent support [child.to_tool() for child in definition.children],
+
     prompts = load_prompt_templates(definition.prompt_path)
 
     if definition.agent_type == "code":
+        kwargs = {}
+        if model_conf.code_block_tags is not None:
+            kwargs["code_block_tags"] = model_conf.code_block_tags
+
         agent = CodeAgent(
                 tools=tools, 
                 model=model,
                 prompt_templates=prompts, 
                 max_steps=definition.max_steps, 
-                verbosity_level=LogLevel.OFF
+                verbosity_level=LogLevel.OFF,
+                **kwargs
                 )
     else:
         agent = ToolCallingAgent(

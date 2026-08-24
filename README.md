@@ -19,9 +19,14 @@ src/
 │   ├── prompts.py              # right now just containes a load prompt file
 │   ├── definitions.py          # definitions of base agents to be used in testing and agent registry
 │   └── base.py                 # contains build_agent function
+├── evaluation/
+│   ├── print_report.py         # contains logic pertaining to converting reports into markdown 
+│   ├── definitions.py          # definitions of verifiers and the verifier registry
+│   └── base.py                 # defines basic necessary structures for validation code
 ├── models/
 │   └── base.py                 # defines how to build a model and model wrapper
 ├── tools/
+│   ├── custom.py               # custom tool classes that get registered
 │   ├── definitions.py          # all custom tool definitions and wrapper/registry definiotion for use in pipeline
 │   └── base.py                 # containes wrapper for use on all tools 
 └── main.py                     # main entrypoint for running testing harness
@@ -33,26 +38,39 @@ src/
 ```bash 
 git clone git@github.com:ivzx04/SciFlawBenchHarness.git && cd SciFlawBenchHarness
 ```
-2. pip install the enviornment
-```bash 
-pip install -e .
+2. Create a virtual environment for this project and enter the environment(optional)
+```bash
+python -m venv <name-of-your-venv>  && source <name-of-your-venv>/bin/activate
 ```
-3. Write the config file in config.json with your specific model access credentials
-4. export the api key environment variable 
-5. run src/main.py with your config path
+3. pip install the enviornment and dependencies
+```bash 
+pip install .
+```
+4. Write the config file in config.json with your specific model access credentials/settings
+5. export the api key environment variables associated with your model providers
+6. run src/main.py with your config path
 ```bash
 python src/main.py --config /path/to/your/config
 ```
 
-## TODOS (in order of importance): 
+## FAQ
 
-1.  need example tasks to ensure there are no larger scale problems with this architecture
-2.  Evaluation logic needs to be done
-    - Quantitatively: pattern would be add a new registry for validators and specify a list for given tasks
-    - Qualitatively:  perhaps run a secondary pass on the result file objects dumped by the evaluator and parse
-      according to the rubric
-3.  more live integration tests would be nice
-4.  build agent needs to support for multiagentic setups (some of this has been thougt out with parent child architecture)
-5.  perhaps rethink how wrappers are made and what information we collect
-6.  make better readme 
+1. how do I define a test task to try and run? 
+
+    For an arbitrary task one only needs to define 3 fields for the harness to run: 
+        "task_id": int 
+        "task": str 
+        "agent_id": Literal_string["code_agent", "tool_agent"]
+
+2. What provider should i use for a given model / how should i configure my settings for this ?
+
+    This largely depends on what kind of API you are hitting where the model is hosted. The most standard provider type
+    is the openai_server, which is compatible with many sorts of providers including openai itself, vllm, etc.
+
+    Currently this code base supports two other types of providers as well, those being litellm and huggingfaces own api.
+
+    Almost all configuration options for these specific providers are documented at the following link: 
+    https://deepwiki.com/huggingface/smolagents/4.2-api-based-models
+
+    and can be specified via the extra_kwargs section in the model config. 
 

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Literal, List
+from typing import Literal, List, Tuple
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, field_validator, PrivateAttr, model_validator
@@ -16,6 +16,9 @@ class ModelConfig(BaseModel):
     api_key_env: str
     api_base: str | None = None
     extra_kwargs: dict = Field(default_factory=dict)
+
+    # this is kept in the model config because it generally is a model dependant field to be configured
+    code_block_tags: Tuple[str,str] | None = None
 
     _api_key: str = PrivateAttr()
 
@@ -48,6 +51,7 @@ class RunConfig(BaseModel):
     task_file: Path 
     log_path: Path = Path("logs/")
     max_concurrent: int = 4         # default max concurrent task running processes
+
 
     logging_level: int = 20
     task_timeout_s: int = 60 * 15 # 15 minute timeout for tasks before they get killed by the runtime manager
