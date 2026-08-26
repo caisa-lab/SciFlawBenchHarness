@@ -32,7 +32,7 @@ src/
 └── main.py                     # main entrypoint for running testing harness
 ```
 
-## how to use
+## How to use
 
 1. clone the repository and cd in
 ```bash 
@@ -52,6 +52,10 @@ pip install .
 ```bash
 python src/main.py --config /path/to/your/config
 ```
+
+## Check out our Google Colab from which you can run this as well
+
+https://colab.research.google.com/drive/1ctDfb7he22O-ipqqhIxSmfM40fEOTWXI?usp=sharing
 
 ## FAQ
 
