@@ -1,12 +1,12 @@
-from core.manager import RuntimeManager
-from core.config import RunConfig
-
 import json
 import logging
 from pathlib import Path
 
 import click
 from pydantic import ValidationError
+
+from core.config import RunConfig
+from core.manager import RuntimeManager
 
 logger = logging.getLogger(__file__)
 
@@ -19,7 +19,7 @@ def main(config):
     """
     conf_path = Path(config)
 
-    with open(conf_path, 'r') as f:
+    with open(conf_path) as f:
         raw = json.load(f)
 
     try: 

@@ -1,17 +1,14 @@
-from core.config import ModelConfig 
-from core.events import EventWatcher
-
-from agents.prompts import  load_prompt_templates
-from agents.definitions import AgentDef, agent_registry
-from models.base import  build_model
-from tools.base import  ToolDef
-from tools.definitions import  tool_registry
-
 from dataclasses import dataclass
-from pathlib import Path
-from typing import List, Tuple
 
-from smolagents import ToolCallingAgent, CodeAgent, Tool, LogLevel
+from smolagents import CodeAgent, LogLevel, ToolCallingAgent
+
+from agents.definitions import AgentDef, agent_registry
+from agents.prompts import load_prompt_templates
+from core.config import ModelConfig
+from core.events import EventWatcher
+from models.base import build_model
+from tools.base import ToolDef
+from tools.definitions import tool_registry
 
 
 @dataclass
@@ -29,7 +26,7 @@ def build_agent(
         agent_id: str, 
         model_conf: ModelConfig, 
         watcher: EventWatcher, 
-        extra_tools: List[ToolDef | str],
+        extra_tools: list[ToolDef | str],
         ) -> BuiltAgent:
     """
     builds an agent from the specified agent_id and model conf along with the associated watcher class
@@ -44,8 +41,7 @@ def build_agent(
     """
     model = build_model(model_conf, watcher)
     definition = agent_registry.create(agent_id)
-    tools = [tool_registry.create(t.tool_name, watcher=watcher, **t.kwargs) for t in definition.tools + extra_tools] # later add multi agent support [child.to_tool() for child in definition.children],
-
+    tools = [tool_registry.create(t.tool_name, watcher=watcher, **t.kwargs) for t in definition.tools + extra_tools] 
     prompts = load_prompt_templates(definition.prompt_path)
 
     if definition.agent_type == "code":

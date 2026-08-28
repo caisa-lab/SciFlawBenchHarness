@@ -1,6 +1,8 @@
+from pathlib import Path
+
 import yaml
 from smolagents import PromptTemplates
-from pathlib import Path
+
 
 def load_prompt_templates(path: Path) -> PromptTemplates:
     """

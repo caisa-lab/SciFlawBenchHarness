@@ -1,11 +1,9 @@
-from core.events import EventWatcher
+
+from smolagents import ChatMessage, InferenceClientModel, LiteLLMModel, Model, OpenAIServerModel, Tool
+
 from core.config import ModelConfig
+from core.events import EventWatcher
 
-import logging
-from typing import Any
-
-
-from smolagents import Model, OpenAIServerModel, LiteLLMModel, ChatMessage, Tool
 
 class WrappedModel(Model):
     """
@@ -72,6 +70,8 @@ def build_model(conf: ModelConfig, watcher: EventWatcher) -> WrappedModel:
 
             model = LiteLLMModel(
                     model_id = conf.model_id,
+                    api_base = conf.api_base,
+                    api_key = conf.api_key,
                     **conf.extra_kwargs
                     )
         case "openai_server":
@@ -82,7 +82,11 @@ def build_model(conf: ModelConfig, watcher: EventWatcher) -> WrappedModel:
                     **conf.extra_kwargs
                     )
         case "hf_api":
-            raise NotImplementedError("HF_API NOT YET SUPPORTED")
+            model = InferenceClientModel(
+                    model_id = conf.model_id,
+                    api_key = conf.api_key,
+                    **conf.extra_kwargs
+                    )
         case "fake_model": # this branch is only for testing
             from tests.fakes.models import ScriptedModel
             model = ScriptedModel(**conf.extra_kwargs)

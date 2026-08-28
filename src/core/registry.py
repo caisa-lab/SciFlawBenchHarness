@@ -1,8 +1,9 @@
-from typing import Dict, Callable, TypeVar, Generic, List
+from collections.abc import Callable
+from typing import TypeVar
 
 T = TypeVar("T")
 
-class Registry(Generic[T]): 
+class Registry[T]: 
     """
     Class made for ease of building predefined instances of things like our tools or agentic setups
     (see the implementation in action in a tool definitions file or in agents/definitions to understand how to use it)
@@ -11,7 +12,7 @@ class Registry(Generic[T]):
 
     def __init__(self, kind: str):
         self._kind = kind
-        self._entries:  Dict[str, Callable[..., T]] = {}
+        self._entries:  dict[str, Callable[..., T]] = {}
 
     def register(self, name: str):
         """
@@ -55,7 +56,7 @@ class Registry(Generic[T]):
         """
         return self.get(name)(**kwargs)
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         """
         Lists the registered strings that map to factory functions in this registry
 

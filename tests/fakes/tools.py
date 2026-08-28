@@ -1,7 +1,7 @@
 from smolagents import Tool
+
 from tools.base import WrappedTool
 from tools.definitions import tool_registry
-from core.events import EventWatcher
 
 
 class FakeSearchTool(Tool):

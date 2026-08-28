@@ -1,25 +1,19 @@
+import json
+import re
+
 from core.registry import Registry
 from evaluation.base import VerificationResult
-
-import re
-import json
 
 verifier_registry = Registry("verifiers")
 
 @verifier_registry.register("content:contains_str")
 def contains_str(got: str, expected: str, case_sensitive: bool = False) -> VerificationResult:
-    if case_sensitive:
-        passed = expected in got
-    else:
-        passed = expected.lower() in got.lower()
+    passed = expected in got if case_sensitive else expected.lower() in got.lower()
     return VerificationResult(passed = passed, details=f"Got: {got} Expected: {expected}")
 
 @verifier_registry.register("content:exact_str_match")
 def exact_str_match(got: str, expected: str, case_sensitive: bool = False) -> VerificationResult:
-    if case_sensitive:
-        passed = expected.strip() == got.strip()
-    else:
-        passed = expected.strip().lower() == got.strip().lower()
+    passed = expected.strip() == got.strip() if case_sensitive else expected.strip().lower() == got.strip().lower()
     return VerificationResult(passed = passed, details=f"Got: {got} Expected: {expected}")
 
 @verifier_registry.register("content:numeric_match")
@@ -71,17 +65,14 @@ def paper_list_match(got: str, expected: list[dict], match_mode: str = "all") ->
 
     matched = got_ids & expected_ids
 
-    if match_mode == "all":
-        passed = expected_ids.issubset(got_ids)
-    else:  
-        passed = len(matched) > 0
+    passed = expected_ids.issubset(got_ids) if match_mode == "all" else len(matched) > 0
 
     return VerificationResult(passed=passed, details=f"matched {len(matched)}/{len(expected_ids)} expected papers")
 
 @verifier_registry.register("format:json_output")
 def json_output(got: str) -> VerificationResult:
     try:
-        payload = json.loads(got)
+        json.loads(got)
     except json.JSONDecodeError as e:
         return VerificationResult(passed=False, details=f"Failed to parse as json: {e}")
     return VerificationResult(passed=True, details="Valid Json provided")

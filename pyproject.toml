@@ -6,9 +6,10 @@ requires-python = ">=3.12"
 readme = "README.md"
 
 dependencies = [
-    "smolagents[litellm,toolkit,openai]>=1.0",
+    "smolagents[toolkit,openai]>=1.0",
     "wikipedia-api>=0.6",
-    "pydantic>=2.0"
+    "pydantic>=2.0",
+    "sympy>=1.14.0",
 ]
 
 [project.optional-dependencies]
@@ -31,7 +32,28 @@ pythonVersion = "3.12.3"
 
 [tool.ruff]
 target-version = "py312"
-line-length = 100
+line-length = 120
+
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade (modernize syntax)
+    "B",   # flake8-bugbear (common bugs/gotchas)
+    "SIM", # flake8-simplify
+]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**" = ["F401"]
+"src/core/tasks.py" = ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -39,5 +61,10 @@ pythonpath = ["."]
 addopts = "--import-mode=importlib -m 'not live'"
 markers = [
   "live: hits a real modle API, costs real tokens, run explicitly with -m live"
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.4",
 ]
 

@@ -1,4 +1,4 @@
-from typing import List, Callable, Any
+from collections.abc import Callable
 
 from pydantic import BaseModel, Field
 

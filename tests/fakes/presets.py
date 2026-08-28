@@ -1,6 +1,6 @@
-from agents.base import agent_registry, AgentDef
-from core.config import ModelConfig
 from pathlib import Path
+
+from agents.base import AgentDef, agent_registry
 
 FAKE_AGENT = AgentDef(
     name="fake_agent",

@@ -1,29 +1,28 @@
-from agents.base import AgentDef, build_agent 
-from agents.definitions import agent_registry
-from core.events import AgentEvent, EventWatcher
+import dataclasses
+import json
+import logging
+import multiprocessing as mp
+import os
+import time
+import traceback
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel, Field, field_validator
+
+from agents.base import build_agent
 from core.config import ModelConfig
-from evaluation.base import VerifierDef, VerificationResult, run_check
+from core.events import AgentEvent, EventWatcher
+from evaluation.base import VerificationResult, VerifierDef, run_check
 from evaluation.definitions import verifier_registry
 from evaluation.print_report import save_markdown_report
 from tools.base import ToolDef
 
-import os
-import time
-import json
-import traceback
-import dataclasses
-import logging
-import multiprocessing as mp
-from typing import Type, List, Dict, Any
-from pathlib import Path
-
-from pydantic import BaseModel, field_validator, Field
-
 logger = logging.getLogger(__file__)
 
 if os.environ.get("ENABLE_TEST_FAKES")  == "1":
-    import tests.fakes.tools
     import tests.fakes.presets
+    import tests.fakes.tools
 
 
 class TaskDef(BaseModel):
@@ -37,8 +36,8 @@ class TaskDef(BaseModel):
     task_id: int
     task: str
     agent_id: str
-    extra_tools: List[ToolDef | str] = Field(default_factory=list)
-    validators: List[VerifierDef] = Field(default_factory=list) 
+    extra_tools: list[ToolDef | str] = Field(default_factory=list)
+    validators: list[VerifierDef] = Field(default_factory=list) 
 
     @field_validator("extra_tools", mode="before")
     @classmethod
@@ -61,8 +60,8 @@ class TaskResult(BaseModel):
     output: Any
     success: bool
     error: str
-    full_trace: List[Dict]
-    check_results: List[VerificationResult] = Field(default_factory=list)
+    full_trace: list[dict]
+    check_results: list[VerificationResult] = Field(default_factory=list)
 
 
 def run_task(task: TaskDef, model_conf: ModelConfig, output_dir: Path, res_queue: mp.Queue):
@@ -80,7 +79,7 @@ def run_task(task: TaskDef, model_conf: ModelConfig, output_dir: Path, res_queue
     """
     
     start_time = time.time()
-    events: List[AgentEvent] = []
+    events: list[AgentEvent] = []
     watcher = EventWatcher(task_id=task.task_id, sink=events.append)
 
     # this dictionary will get passed into the shared log file
@@ -108,11 +107,10 @@ def run_task(task: TaskDef, model_conf: ModelConfig, output_dir: Path, res_queue
         error_str = ""
         verifier_results = [run_check(verifier_registry.get(verifier.name), out, **verifier.kwargs) \
                 for verifier in task.validators]
-    except Exception as e: 
+    except Exception: 
         out = None
         success = False
         error_str = traceback.format_exc()
-        memory_steps = None
         verifier_results = []
 
     

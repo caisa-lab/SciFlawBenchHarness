@@ -1,13 +1,14 @@
 import json
 import multiprocessing as mp
 
+import tests.fakes.presets
+import tests.fakes.tools
+from core.config import ModelConfig, RunConfig
 from core.manager import RuntimeManager
-from core.config import RunConfig, ModelConfig
-from core.tasks import run_task, TaskDef
+from core.tasks import TaskDef, run_task
+
 
 def setup_basics(tmp_path, monkeypatch):
-    import tests.fakes.tools     # import for side effect: registers "fake_search"
-    import tests.fakes.presets   # import for side effect: registers "fake_agent"
     monkeypatch.setenv("FAKE_KEY", "x")
 
 
@@ -23,11 +24,10 @@ def test_run_fake_task(tmp_path, monkeypatch):
         extra_kwargs={"responses": ["final_answer('done')"]},
     )
 
-    with open(task_file, "r") as f:
+    with open(task_file) as f:
         raw_task = json.load(f)
         taskdef = TaskDef(**raw_task)
 
-    from pathlib import Path
     log_path = tmp_path / "logs"
     queue = mp.Queue()
 
@@ -100,13 +100,13 @@ def test_pipeline_with_pressure(tmp_path, monkeypatch):
 
     task_file = tmp_path / "tasks.jsonl"
     task_file.write_text(
-        '{"task_id": 1, "task": "say hi", "agent_id": "fake_agent", "tools": ["fake_search"]}\n'
-        '{"task_id": 2, "task": "say bye", "agent_id": "fake_agent", "tools": ["fake_search"]}\n'
-        '{"task_id": 3, "task": "say bye", "agent_id": "fake_agent", "tools": ["fake_search"]}\n'
-        '{"task_id": 4, "task": "say bye", "agent_id": "fake_agent", "tools": ["fake_search"]}\n'
-        '{"task_id": 5, "task": "say bye", "agent_id": "fake_agent", "tools": ["fake_search"]}\n'
-        '{"task_id": 6, "task": "say bye", "agent_id": "fake_agent", "tools": ["fake_search"]}\n'
-        '{"task_id": 7, "task": "say bye", "agent_id": "fake_agent", "tools": ["fake_search"]}\n'
+        '{"task_id": 1, "task": "say hi",  "agent_id": "fake_agent"  }\n'
+        '{"task_id": 2, "task": "say bye", "agent_id": "fake_agent" }\n'
+        '{"task_id": 3, "task": "say bye", "agent_id": "fake_agent" }\n'
+        '{"task_id": 4, "task": "say bye", "agent_id": "fake_agent" }\n'
+        '{"task_id": 5, "task": "say bye", "agent_id": "fake_agent" }\n'
+        '{"task_id": 6, "task": "say bye", "agent_id": "fake_agent" }\n'
+        '{"task_id": 7, "task": "say bye", "agent_id": "fake_agent" }\n'
     )
 
     conf = RunConfig(
@@ -185,7 +185,7 @@ def test_timedout_tasks(tmp_path, monkeypatch):
 
     RuntimeManager(conf).run()
 
-    assert (tmp_path / "logs" / f"001.partial.json").exists()
+    assert (tmp_path / "logs" / "001.partial.json").exists()
 
     summary_lines = (tmp_path / "logs" / "aggregate_results.jsonl").read_text().strip().splitlines()
     assert len(summary_lines) == 1

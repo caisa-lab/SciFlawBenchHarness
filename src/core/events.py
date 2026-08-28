@@ -1,11 +1,12 @@
 import time
 import traceback
-
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Type, List, Dict, Any, Callable, Literal
-from enum import Enum
+from enum import StrEnum
+from typing import Any, Literal
 
-class EventType(str, Enum):
+
+class EventType(StrEnum):
     """
     Enum used to track the events were interesed (listed down below)
     """
@@ -25,7 +26,7 @@ class AgentEvent:
     """
     event_type: EventType 
     task_id: int
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     timestamp: float
 
 
@@ -38,7 +39,7 @@ class EventWatcher:
         self.task_id = task_id
         self._sink = sink
 
-    def _emit(self, event_type: EventType, payload: Dict[str, Any]):
+    def _emit(self, event_type: EventType, payload: dict[str, Any]):
         """
         Hidden method  used in the call which makes the dataclass that gets stored in the sink and actually pushes it 
         through to the sink
@@ -74,8 +75,8 @@ class EventWatcher:
             result = fn(*args, **kwargs)
             self._emit(event_type=EventType(f"{kind}_call_end"), payload={"name": name, "result": result})
             return result
-        except Exception as e: 
-            self._emit(event_type=EventType(f"error"), payload={"name": name, "error": traceback.format_exc()})
+        except Exception: 
+            self._emit(event_type=EventType("error"), payload={"name": name, "error": traceback.format_exc()})
             raise
 
 

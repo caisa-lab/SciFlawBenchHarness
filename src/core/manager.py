@@ -1,19 +1,18 @@
 # project modules
-from core.config import RunConfig, ModelConfig
-from core.tasks import run_task, TaskDef
+import json
+import logging
+import multiprocessing as mp
 
 # stdlib
 import os
-import json 
-import time 
-import logging 
 import queue as q
-import multiprocessing as mp 
-from typing import Dict, Set, List, Any
+import time
 from pathlib import Path
+from typing import Any
 
 # pip installed
-from smolagents import LiteLLMModel, OpenAIServerModel, Model
+from core.config import ModelConfig, RunConfig
+from core.tasks import TaskDef, run_task
 
 mp.set_start_method("spawn", force=True) # IMPORTANT: this means it will not just fork the process, which means slightly
                                          # slower start times but ultimately saves from pain when it comes to possible 
@@ -52,11 +51,11 @@ class RuntimeManager:
         self.run_summary_file = self.log_path / "run_summary.log"
 
         self._result_queue = mp.Queue()
-        self._active: Dict[int, dict] = {} 
+        self._active: dict[int, dict] = {} 
         self._pending = self.load_tasks()
         logger.info("Runtime manager initialized")
     
-    def load_tasks(self) -> List[TaskDef]:
+    def load_tasks(self) -> list[TaskDef]:
         """
         This method loads all of the yet to be completed logs in single run of the harness according to the files in the
         log directory
@@ -67,7 +66,7 @@ class RuntimeManager:
         already_done = self.load_completed()
         pending = []
 
-        with open(self.task_file, 'r') as f:
+        with open(self.task_file) as f:
             for line_num, raw_line in enumerate(f):
                 line = raw_line.strip()
                 if not line:
@@ -83,7 +82,7 @@ class RuntimeManager:
         return pending
 
 
-    def load_completed(self) -> Set[int]:
+    def load_completed(self) -> set[int]:
         """
         simple scan of log directory to recover state of completed tasks
 
@@ -182,7 +181,7 @@ class RuntimeManager:
         for task_id in to_kill:
             del self._active[task_id]
 
-    def _handle_message(self, msg: Dict[str, Any]):
+    def _handle_message(self, msg: dict[str, Any]):
         """
         takes a message in and handles logging according to what the message content is 
 

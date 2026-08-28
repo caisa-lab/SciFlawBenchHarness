@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
-from typing import Literal, List, Tuple
+from typing import Literal
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field, field_validator, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
+
 
 class ModelConfig(BaseModel):
     """
@@ -18,7 +19,7 @@ class ModelConfig(BaseModel):
     extra_kwargs: dict = Field(default_factory=dict)
 
     # this is kept in the model config because it generally is a model dependant field to be configured
-    code_block_tags: Tuple[str,str] | None = None
+    code_block_tags: tuple[str,str] | None = None
 
     _api_key: str = PrivateAttr()
 
@@ -43,6 +44,9 @@ class ModelConfig(BaseModel):
         """
         return self._api_key
 
+class ToolConfig(BaseModel):
+    integer: int
+
 class RunConfig(BaseModel):
     """
     class which stores all the information needed to provision a benchmark run (also gets read from the config)
@@ -55,7 +59,7 @@ class RunConfig(BaseModel):
 
     logging_level: int = 20
     task_timeout_s: int = 60 * 15 # 15 minute timeout for tasks before they get killed by the runtime manager
-    restarting: bool | None = None  # if your restarting everything specify this is true and have the log path be specific
+    restarting: bool | None = None  # if you want to restearting on a specific dir specify the path and set to True
 
 
     @field_validator("task_file")

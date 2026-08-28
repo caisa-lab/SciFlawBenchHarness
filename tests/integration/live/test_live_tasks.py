@@ -1,12 +1,11 @@
+import json
+import multiprocessing as mp
+import os
+
+import pytest
+
 from core.config import ModelConfig
 from core.tasks import TaskDef, run_task
-
-import os 
-import json
-import pytest
-import multiprocessing as mp
-from pathlib import Path
-
 
 
 @pytest.mark.live
@@ -17,14 +16,18 @@ from pathlib import Path
 def test_run_task_with_real_openrouter_ai_agent(tmp_path):
     task_file = tmp_path / "tasks.jsonl"
     task_file.write_text(
-    '{"task_id": 1, "task": "What year was the Eiffel Tower completed, and who was the chief engineer credited with the project?", "agent_id": "default_agent", "tools": ["web_search"]}'
+    '''{
+        "task_id": 1, 
+        "task": "What year was the Eiffel Tower completed, and who was the chief engineer credited with the project?", 
+        "agent_id": "code_agent"
+    }'''
     )
 
     model=ModelConfig(
             provider="litellm", model_id="openrouter/qwen/qwen3.7-flash", api_key_env="OPENROUTER_API_KEY"
             )
 
-    with open(task_file, "r") as f:
+    with open(task_file) as f:
         raw_task = json.load(f)
         taskdef = TaskDef(**raw_task)
 

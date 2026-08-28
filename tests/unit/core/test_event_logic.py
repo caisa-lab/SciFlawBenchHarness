@@ -1,11 +1,10 @@
 import pytest
-
-from core.events import *
-from tools.base import WrappedTool
-from models.base import WrappedModel
-
-from smolagents import Tool, Model
+from smolagents import Model, Tool
 from smolagents.models import ChatMessage, MessageRole
+
+from core.events import AgentEvent, EventType, EventWatcher
+from models.base import WrappedModel
+from tools.base import WrappedTool
 
 
 def test_emit_calls_sink_with_event():
@@ -67,7 +66,8 @@ def test_watcher_call_with_fake_model():
     assert isinstance(result, ChatMessage)
     event_types = [e.event_type for e in captured]
     assert event_types == [EventType.ModelCallStart, EventType.ModelCallEnd]
-    assert captured[0].payload["kwargs"] == { "messages": "python testing"}
+    print(captured)
+    assert captured[0].payload["new_messages"] ==  "python testing"
     assert captured[1].payload["result"].role == MessageRole.ASSISTANT
     assert captured[1].payload["result"].content == "fake response"
 

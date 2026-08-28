@@ -1,11 +1,10 @@
-from core.registry import Registry
-
-from tools.definitions import tool_registry
-from tools.base import ToolDef
+from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, field_validator
-from pathlib import Path
-from typing import List, Literal
+
+from core.registry import Registry
+from tools.base import ToolDef
 
 agent_registry = Registry("agent_descriptions")
 
@@ -16,9 +15,9 @@ class AgentDef(BaseModel):
     """
     name: str
     prompt_path: Path
-    tools: List[ToolDef | str]
+    tools: list[ToolDef | str]
     agent_type: Literal["code", "tool"]
-    children: List["AgentDef"] | None = None
+    children: list["AgentDef"] | None = None
     parent: "AgentDef | None" = None
     max_steps: int = 40
 

@@ -1,6 +1,7 @@
-import time
-from smolagents import Model, ChatMessage, MessageRole
 import itertools
+import time
+
+from smolagents import ChatMessage, MessageRole, Model
 
 
 class ScriptedModel(Model):

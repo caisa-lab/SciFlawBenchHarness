@@ -1,5 +1,7 @@
 import pytest
+
 from core.registry import Registry
+
 
 def test_register_and_create():
     reg: Registry[str] = Registry("thing")

@@ -1,16 +1,19 @@
-import json
 import time
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from core.config import ModelConfig, RunConfig
 from core.manager import RuntimeManager
-from core.config import RunConfig, ModelConfig
 
+EXAMPLE_TASK1_STRING = '{"task_id": 1,  \
+                            "task": "Find for me what is the meaning of life, the universe, and everything.",  \
+                            "agent_id": "code_agent"   \
+                          }'
 
-EXAMPLE_TASK1_STRING = '{ "task_id": 1, "task": "Find for me what is the meaning of life, the universe, and everything.", "agent_id": "default", "ground_truth": 42, "tools": ["search"], "failure_modes": { "quantitative": { "correctness": true, "correct_tool_calls": false, "code_safety": false, "robustness_against_adversarial_inputs": false, "time_efficiency": false, "sycophancy":false }, "qualitative": { "planning": false, "reasoning": false, "uncertainty_awareness": true, "aesthetic_quality": false, "lost_context_on_multi_agent_tasks": false, "implicit_domain_knowledge": true } } }'
-EXAMPLE_TASK2_STRING = '{ "task_id": 2, "task": "research tomatoes for me and provide 5 facts with sources", "agent_id": "default", "ground_truth": 42, "tools": ["search"], "failure_modes": { "quantitative": { "correctness": true, "correct_tool_calls": false, "code_safety": false, "robustness_against_adversarial_inputs": false, "time_efficiency": false, "sycophancy":false }, "qualitative": { "planning": false, "reasoning": false, "uncertainty_awareness": true, "aesthetic_quality": false, "lost_context_on_multi_agent_tasks": false, "implicit_domain_knowledge": true } } }'
-
+EXAMPLE_TASK2_STRING = '{"task_id": 2,  \
+                            "task": "research tomatoes for me and provide 5 facts with sources", \
+                            "agent_id": "code_agent" \
+                        }' 
 
 def make_run_config(tmp_path: Path, task_file_content: str, timeout_s = 15 * 60) -> RunConfig:
     task_file = tmp_path / "tasks.jsonl"

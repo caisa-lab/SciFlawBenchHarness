@@ -1,7 +1,7 @@
-from smolagents import Tool
-from core.events import EventWatcher
-
 from pydantic import BaseModel, Field
+from smolagents import Tool
+
+from core.events import EventWatcher
 
 
 class ToolDef(BaseModel):

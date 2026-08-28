@@ -1,10 +1,6 @@
-from core.events import AgentEvent
 
 import json
 import re
-
-from typing import Dict, List
-
 
 TOOL_ICONS = {
     "web_search": "🔍",
@@ -15,7 +11,7 @@ TOOL_ICONS = {
 }
 
 
-def extract_concise_trace(events: List[Dict]) -> tuple:
+def extract_concise_trace(events: list[dict]) -> tuple:
     # TODO: This has to be improved or the CodingAgent, and also checked for other than search and claculator tool
     """
     Extracts a concise trace from the list of AgentEvent objects, summarizing tool and model calls, duraion, and tokens.
@@ -35,7 +31,7 @@ def extract_concise_trace(events: List[Dict]) -> tuple:
     duration = round(end_ts - start_ts, 3) if end_ts and start_ts else 0.0
 
     for e in events:
-        tool, payload = e.get("event_type", ""), e.get("payload") or {}
+        tool, payload = e.get("event_type", ""), e.get("payload", {})
 
         if tool == "tool_call_start":
             inputs = payload.get("kwargs") or (payload.get("args", [])[0] if payload.get("args") else {})
@@ -45,11 +41,11 @@ def extract_concise_trace(events: List[Dict]) -> tuple:
             trace.append(pending_tool)
             pending_tool = None
         elif tool == "model_call_end":
-            res = payload.get("result") or {}
+            res = payload.get("result", {}) or {}
             content = res.get("content", "") if isinstance(res, dict) else str(res)
             trace.append({"event_type": tool, "content": content})
 
-            usage = res.get("token_usage") or res.get("raw", {}).get("usage") or {}
+            usage = res.get("token_usage", {}) or (res.get("raw") or {}).get("usage") or {}
             tokens["input_tokens"] += usage.get("input_tokens", usage.get("prompt_tokens", 0)) or 0
             tokens["output_tokens"] += usage.get("output_tokens", usage.get("completion_tokens", 0)) or 0
 
@@ -100,7 +96,7 @@ def get_preview(tool, text):
         preview = "**URLs Found:**\n" + ", ".join(urls) + "\n\n" if urls else ""
     if "visit" in tool and text:
         first_lines = "\n> ".join(
-            [l.strip() for l in text.split("\n") if l.strip()][:5]
+            [line.strip() for line in text.split("\n") if line.strip()][:5]
         )
         preview = f"**Snippet**\n> {first_lines}...\n\n"
 
@@ -115,7 +111,7 @@ def get_preview(tool, text):
 
 
 def save_markdown_report(json_path, output_path):
-    with open(json_path, "r", encoding="utf-8") as f:
+    with open(json_path, encoding="utf-8") as f:
         data = json.load(f)
 
     # Top summary section
@@ -162,10 +158,7 @@ def save_markdown_report(json_path, output_path):
             tool = step.get("tool_name", "Tool")
             inputs = json.dumps(step.get("inputs", {}), indent=2)
             result = step.get("result", "")
-            if tool == "calculator":
-                output_section = f"**Output:** `{result}`\n"
-            else:
-                output_section = get_preview(tool, result)
+            output_section = f"**Output:** `{result}`\n" if tool == "calculator" else  get_preview(tool, result)
 
             block = (
                 f"\n> **Tool Call:** `{tool}`\n\n"
