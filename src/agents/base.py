@@ -7,7 +7,7 @@ from agents.prompts import load_prompt_templates
 from core.config import ModelConfig
 from core.events import EventWatcher
 from models.base import build_model
-from tools.base import ToolDef
+from tools.base import ToolDef, resolve_tools
 from tools.definitions import tool_registry
 
 
@@ -26,6 +26,7 @@ def build_agent(
         agent_id: str, 
         model_conf: ModelConfig, 
         watcher: EventWatcher, 
+        tool_overrides: dict[str, ToolDef],
         extra_tools: list[ToolDef | str],
         ) -> BuiltAgent:
     """
@@ -41,8 +42,9 @@ def build_agent(
     """
     model = build_model(model_conf, watcher)
     definition = agent_registry.create(agent_id)
-    tools = [tool_registry.create(t.tool_name, watcher=watcher, **t.kwargs) for t in definition.tools + extra_tools] 
     prompts = load_prompt_templates(definition.prompt_path)
+    overrides = resolve_tools(definition.tools, tool_overrides)
+    tools = [tool_registry.create(t.tool_name, watcher=watcher, **t.kwargs) for t in overrides + extra_tools] 
 
     if definition.agent_type == "code":
         kwargs = {}

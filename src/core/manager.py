@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 # pip installed
-from core.config import ModelConfig, RunConfig
+from core.config import RunConfig
 from core.tasks import TaskDef, run_task
 
 mp.set_start_method("spawn", force=True) # IMPORTANT: this means it will not just fork the process, which means slightly
@@ -29,8 +29,9 @@ class RuntimeManager:
     """
 
     def __init__(self, conf: RunConfig):
-        logging.basicConfig(level=conf.logging_level)
+        self.full_conf = conf
 
+        logging.basicConfig(level=conf.logging_level)
         logger.info("Initailizing runtime manager for current run")
         self.model_conf = conf.model
 
@@ -42,7 +43,6 @@ class RuntimeManager:
         self.task_file = conf.task_file
         self.max_concurrent = conf.max_concurrent
         self.task_timeout_s = conf.task_timeout_s
-
 
         if not self.log_path.exists():
             os.makedirs(self.log_path)
@@ -106,7 +106,7 @@ class RuntimeManager:
                 task = self._pending.pop(0)
                 proc = self._spawn_task(
                         task = task,
-                        model_conf = self.model_conf,
+                        conf = self.full_conf,
                         log_path = self.log_path,
                         res_queue = self._result_queue
                         )
@@ -118,7 +118,7 @@ class RuntimeManager:
 
         self._drain_remaining()
 
-    def _spawn_task(self, task: TaskDef, model_conf: ModelConfig, log_path: Path, res_queue: mp.Queue) -> mp.Process:
+    def _spawn_task(self, task: TaskDef, conf: RunConfig, log_path: Path, res_queue: mp.Queue) -> mp.Process:
         """
         simply spawns a subprocess which actually runs the task with the agent setup and model configuraion specified 
 
@@ -130,7 +130,7 @@ class RuntimeManager:
 
         Returns (mp.Process): a process class handler class which will be tracked through the _active queue 
         """
-        p = mp.Process(target=run_task, args=(task, model_conf, log_path, res_queue,))
+        p = mp.Process(target=run_task, args=(task, conf, log_path, res_queue,))
         p.start()
         return p
 
@@ -147,7 +147,6 @@ class RuntimeManager:
             msg = self._result_queue.get(timeout=timeout)
         except q.Empty:
             return
-
 
         # reap the finished process
         task_id = msg["task_id"]
@@ -230,4 +229,3 @@ class RuntimeManager:
                 break
 
             self._handle_message(msg)
-        

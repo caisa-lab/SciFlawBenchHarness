@@ -1,4 +1,4 @@
-from tools.custom import CalculatorTool
+from tools.misc import CalculatorTool
 
 
 def test_simple_calculation():

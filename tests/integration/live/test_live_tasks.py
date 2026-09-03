@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from core.config import ModelConfig
+from core.config import ModelConfig, RunConfig
 from core.tasks import TaskDef, run_task
 
 
@@ -23,9 +23,13 @@ def test_run_task_with_real_openrouter_ai_agent(tmp_path):
     }'''
     )
 
-    model=ModelConfig(
+    conf = RunConfig(
+        model=ModelConfig(
             provider="litellm", model_id="openrouter/qwen/qwen3.7-flash", api_key_env="OPENROUTER_API_KEY"
-            )
+            ),
+        task_file = task_file,
+        log_path = tmp_path / "logs"
+    )
 
     with open(task_file) as f:
         raw_task = json.load(f)
@@ -34,7 +38,7 @@ def test_run_task_with_real_openrouter_ai_agent(tmp_path):
     log_path = tmp_path / "logs"
     queue = mp.Queue()
 
-    run_task(taskdef, model, log_path, queue)
+    run_task(taskdef, conf, log_path, queue)
 
     data = json.loads((log_path / f"{taskdef.task_id:03d}.json").read_text())
 

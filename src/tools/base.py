@@ -1,3 +1,4 @@
+
 from pydantic import BaseModel, Field
 from smolagents import Tool
 
@@ -34,3 +35,13 @@ class WrappedTool(Tool):
         the input/results out as well)
         """
         return self._watcher("tool", self.name, self._wrapped.forward, *args, **kwargs)
+
+def resolve_tools(base_tools: list[ToolDef], tool_overrides: dict[str, ToolDef]) -> list:
+    tools = []
+
+    for tool in base_tools:
+        name = tool.tool_name
+        if name in tool_overrides:
+            tool.kwargs = tool_overrides[name].kwargs
+        tools.append(tool)
+    return tools

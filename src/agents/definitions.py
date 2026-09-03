@@ -32,14 +32,14 @@ class AgentDef(BaseModel):
 DEFAULT_CODING_AGENT = AgentDef(
             name = "default code agent",
             prompt_path = Path("prompts/code_agent.yaml"),
-            tools = ["web_search", "wikipedia_search", "visit_webpage", "calculator", "current_time"],
+            tools = ["web_search", "wikipedia_search", "visit_webpage", "calculator", "current_time", "arxiv_search"],
             agent_type = "code"
             )
 
 DEFAULT_TOOL_AGENT = AgentDef(
             name = "default tool agent",
             prompt_path = Path("prompts/tool_agent.yaml"),
-            tools = ["web_search", "wikipedia_search", "visit_webpage", "calculator", "current_time"],
+            tools = ["web_search", "wikipedia_search", "visit_webpage", "calculator", "current_time", "arxiv_search"],
             agent_type = "tool"
             )
 

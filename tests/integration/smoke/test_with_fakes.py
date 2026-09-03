@@ -19,10 +19,16 @@ def test_run_fake_task(tmp_path, monkeypatch):
         '{"task_id": 1, "task": "say hi", "agent_id": "fake_agent", "tools": ["fake_search"]}\n'
     )
 
-    model=ModelConfig(
-        provider="fake_model", model_id="fake", api_key_env="FAKE_KEY",
-        extra_kwargs={"responses": ["final_answer('done')"]},
+    conf = RunConfig(
+        model=ModelConfig(
+            provider="fake_model", model_id="fake", api_key_env="FAKE_KEY",
+            extra_kwargs={"responses": ["final_answer('done')"]},
+        ),
+        task_file = task_file,
+        log_path = tmp_path / "logs"
     )
+
+
 
     with open(task_file) as f:
         raw_task = json.load(f)
@@ -31,7 +37,7 @@ def test_run_fake_task(tmp_path, monkeypatch):
     log_path = tmp_path / "logs"
     queue = mp.Queue()
 
-    run_task(taskdef, model, log_path, queue)
+    run_task(taskdef, conf, log_path, queue)
 
     data = json.loads((log_path / f"{taskdef.task_id:03d}.json").read_text())
 

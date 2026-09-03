@@ -5,6 +5,8 @@ from typing import Literal
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
 
+from tools.base import ToolDef
+
 
 class ModelConfig(BaseModel):
     """
@@ -44,8 +46,6 @@ class ModelConfig(BaseModel):
         """
         return self._api_key
 
-class ToolConfig(BaseModel):
-    integer: int
 
 class RunConfig(BaseModel):
     """
@@ -53,9 +53,9 @@ class RunConfig(BaseModel):
     """
     model: ModelConfig
     task_file: Path 
+    tool_configs: list[ToolDef] = Field(default_factory=list)
     log_path: Path = Path("logs/")
     max_concurrent: int = 4         # default max concurrent task running processes
-
 
     logging_level: int = 20
     task_timeout_s: int = 60 * 15 # 15 minute timeout for tasks before they get killed by the runtime manager

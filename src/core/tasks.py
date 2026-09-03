@@ -11,7 +11,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 from agents.base import build_agent
-from core.config import ModelConfig
+from core.config import RunConfig
 from core.events import AgentEvent, EventWatcher
 from evaluation.base import VerificationResult, VerifierDef, run_check
 from evaluation.definitions import verifier_registry
@@ -64,14 +64,14 @@ class TaskResult(BaseModel):
     check_results: list[VerificationResult] = Field(default_factory=list)
 
 
-def run_task(task: TaskDef, model_conf: ModelConfig, output_dir: Path, res_queue: mp.Queue):
+def run_task(task: TaskDef, run_config: RunConfig, output_dir: Path, res_queue: mp.Queue):
     """
     The target function actually run by the runtime manager to launch subprocesses which complete provision and
     complete the agentic tasks
 
     Args:
         task (TaskDef): necessary information to run the given task
-        model_conf (ModelConfig): information needed to build the model for this task
+        run_config (RunConfig): configuration of the harness for this run
         output_dir (Path): path to the log directory where the result json file is written
         res_queue (mp.Queue): queue in which to signal that the task has finished running so the runtimme manager can
         clean up
@@ -81,6 +81,7 @@ def run_task(task: TaskDef, model_conf: ModelConfig, output_dir: Path, res_queue
     start_time = time.time()
     events: list[AgentEvent] = []
     watcher = EventWatcher(task_id=task.task_id, sink=events.append)
+    model_conf = run_config.model
 
     # this dictionary will get passed into the shared log file
     to_log = {"id": task.task_id, "task": task.task}
@@ -100,8 +101,10 @@ def run_task(task: TaskDef, model_conf: ModelConfig, output_dir: Path, res_queue
         raise SystemExit(1)
     signal.signal(signal.SIGTERM, handle_sigterm)
 
+    tool_overrides = {t.tool_name: t for t in run_config.tool_configs}
+
     try:
-        built_agent = build_agent(task.agent_id, model_conf, watcher, task.extra_tools)
+        built_agent = build_agent(task.agent_id, model_conf, watcher, tool_overrides, task.extra_tools)
         out = built_agent.watcher("agent", built_agent.definition.name, built_agent.agent.run, task.task)
         success = True
         error_str = ""
