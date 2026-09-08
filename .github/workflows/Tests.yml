@@ -1,0 +1,35 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12.3
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.3"
+          cache: "pip"
+
+      - name: Install package and dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        # 'live' tests (real model API calls, real cost) are excluded by
+        # default via addopts in pyproject.toml — no extra flag needed here.
+        run: pytest -v
+
+      - name: Type check
+        run: pyright
+        continue-on-error: true   # remove once the codebase is fully clean, so a type error blocks mergesl
