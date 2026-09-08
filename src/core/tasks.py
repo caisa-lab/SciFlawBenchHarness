@@ -39,6 +39,8 @@ class TaskDef(BaseModel):
     extra_tools: list[ToolDef | str] = Field(default_factory=list)
     validators: list[VerifierDef] = Field(default_factory=list) 
 
+    repetition: int = 1
+
     @field_validator("extra_tools", mode="before")
     @classmethod
     def normalize_tools(cls, v):
@@ -57,6 +59,7 @@ class TaskResult(BaseModel):
     """
     task_id: int
     task: str
+    repetition: int
     output: Any
     success: bool
     error: str
@@ -92,12 +95,13 @@ def run_task(task: TaskDef, run_config: RunConfig, output_dir: Path, res_queue: 
         to_log["status"] = "terminated"
         to_log["time_elapsed"] = time.time() - start_time
 
-        res_queue.put({"task_id": task.task_id, "kind": "killed", "to_log": to_log})
+        res_queue.put({"task_id": task.task_id, "repetition": task.repetition, "kind": "killed", "to_log": to_log})
         try: 
             partial_path = output_dir / f"{task.task_id:03d}.partial.json"
             partial_path.write_text(json.dumps([dataclasses.asdict(e) for e in events]))
         except Exception:
             pass
+
         raise SystemExit(1)
     signal.signal(signal.SIGTERM, handle_sigterm)
 
@@ -119,6 +123,7 @@ def run_task(task: TaskDef, run_config: RunConfig, output_dir: Path, res_queue: 
     
     result = TaskResult(
             task_id=task.task_id, 
+            repetition = task.repetition,
             task=task.task, 
             output=out, 
             success=success,
@@ -131,19 +136,34 @@ def run_task(task: TaskDef, run_config: RunConfig, output_dir: Path, res_queue: 
     if not output_dir.exists():
         os.mkdir(output_dir)
 
-    temp_file = output_dir / f"{task.task_id:03d}.json.tmp"
-    out_file = output_dir / f"{task.task_id:03d}.json"
-    report_file = output_dir / f"{task.task_id:03d}_report.md"
+    out_file = output_dir / f"{task.task_id:03d}.jsonl"
 
-    with open(temp_file, 'w') as f:
-        json.dump(result.model_dump(),f)
-    os.rename(temp_file, out_file)
+    res = result.model_dump()
 
-    save_markdown_report(out_file, report_file)
+    with open(out_file, 'a') as f:
+        json.dump(res, f)
+        f.write("\n")
+
 
     to_log["checks"] = [res.model_dump() for res in verifier_results]
     to_log["status"] = "success" if success else "failed"
     to_log["time_elapsed"] = time.time() - start_time
     to_log["error"] = error_str
 
-    res_queue.put({"task_id": task.task_id, "kind": "task_finished", "success": success, "to_log": to_log})
+    res_queue.put({
+        "task_id": task.task_id, 
+        "repetition": task.repetition, 
+        "kind": "task_finished", 
+        "success": success, 
+        "to_log": to_log
+        })
+
+
+    if run_config.generate_trace_reports:
+        report_dir = output_dir/ f"{task.task_id:03d}_reports/" 
+        if not report_dir.exists():
+            os.mkdir(report_dir)
+
+        report_file = report_dir / f"{task.task_id:03d}.{task.repetition}_report.md"
+        save_markdown_report(res, report_file)
+

@@ -55,11 +55,13 @@ class RunConfig(BaseModel):
     task_file: Path 
     tool_configs: list[ToolDef] = Field(default_factory=list)
     log_path: Path = Path("logs/")
-    max_concurrent: int = 4         # default max concurrent task running processes
+    max_concurrent: int = 3         # default max concurrent task running processes
 
+    repetitions_per_task: int=3
     logging_level: int = 20
     task_timeout_s: int = 60 * 15 # 15 minute timeout for tasks before they get killed by the runtime manager
     restarting: bool | None = None  # if you want to restearting on a specific dir specify the path and set to True
+    generate_trace_reports: bool=False
 
 
     @field_validator("task_file")

@@ -43,6 +43,7 @@ class RuntimeManager:
         self.task_file = conf.task_file
         self.max_concurrent = conf.max_concurrent
         self.task_timeout_s = conf.task_timeout_s
+        self.repetitions = conf.repetitions_per_task
 
         if not self.log_path.exists():
             os.makedirs(self.log_path)
@@ -51,7 +52,7 @@ class RuntimeManager:
         self.run_summary_file = self.log_path / "run_summary.log"
 
         self._result_queue = mp.Queue()
-        self._active: dict[int, dict] = {} 
+        self._active: dict[tuple[int,int], dict] = {} 
         self._pending = self.load_tasks()
         logger.info("Runtime manager initialized")
     
@@ -77,23 +78,37 @@ class RuntimeManager:
                     logger.error(f"Failed to load task on line {line_num + 1}: got the following error: {e}")
                     exit(1)
 
-                if task.task_id not in already_done:
-                    pending.append(task)
+                for i in range(1, self.repetitions + 1):
+                    if (task.task_id, i) not in already_done:
+                        task.repetition = i
+                        pending.append(task.model_copy())
         return pending
 
 
-    def load_completed(self) -> set[int]:
+    def load_completed(self) -> set[tuple[int, int]]:
         """
         simple scan of log directory to recover state of completed tasks
 
-        Returns (Set[int]): a set of integers representing completed task ids
+        Returns (Set[Tuple[int,int]]): a set of integers representing completed task ids
         """
 
+        res = set()
         res_dir = self.log_path / "results"
         if not res_dir.is_dir():
             logger.info(f"loaded no completed items from {self.log_path}")
-            return set()
-        return {int(p.stem) for p in res_dir.glob("*.json")}
+            return res
+
+        for p in res_dir.glob("*.jsonl"):
+            try: 
+                int(p.stem)
+            except Exception:
+                continue
+
+            with open(p) as f:
+                num_finished = sum(1 for line in f)
+                for i in range(num_finished):
+                    res.add((int(p.stem), i + 1))
+        return res
 
     def run(self) -> None:
         """
@@ -104,14 +119,20 @@ class RuntimeManager:
         while self._pending or self._active: 
             while self._pending and len(self._active) < self.max_concurrent: 
                 task = self._pending.pop(0)
+                repitition = task.repetition
                 proc = self._spawn_task(
                         task = task,
                         conf = self.full_conf,
                         log_path = self.log_path,
                         res_queue = self._result_queue
                         )
-                self._active[task.task_id] = {"proc": proc, "started": time.time()}
-                logger.info(f"Task id - ({task.task_id:03d}) is now started")
+
+                self._active[(task.task_id, repitition)] = {"proc": proc, "started": time.time()}
+
+                if self.repetitions <= 1:
+                    logger.info(f"Task id - ({task.task_id:03d}) started")
+                else: 
+                    logger.info(f"Task id - ({task.task_id:03d}.{task.repetition}) started")
 
             self._drain_results()
             self._check_timeouts()
@@ -150,7 +171,9 @@ class RuntimeManager:
 
         # reap the finished process
         task_id = msg["task_id"]
-        entry = self._active.pop(task_id, None)
+        repetition = msg["repetition"]
+
+        entry = self._active.pop((task_id, repetition), None)
         if entry:
             entry["proc"].join(timeout=5)
 
@@ -164,21 +187,21 @@ class RuntimeManager:
         process but this can be configured fairly easily if we find that we need different time scales
         """
         now = time.time()
-        to_kill: list[int] = []
+        to_kill: list[tuple[int, int]] = []
 
-        for task_id, entry in self._active.items():
+        for (task_id, repitition), entry in self._active.items():
             if now - entry['started'] > self.task_timeout_s:
                 entry['proc'].terminate()
                 entry['proc'].join(timeout=10) # 10 seconds for the process to clean up after itself 
                 if entry['proc'].is_alive():
                     entry['proc'].kill()
                     entry['proc'].join(timeout=5)
-                to_kill.append(task_id)
-                logger.info(f"Task: {task_id:03d} timed out...")
+                to_kill.append((task_id, repitition))
+                logger.info(f"Task: {task_id:03d}.{repitition} timed out...")
 
         # update dictionary state associated with killed tasks
-        for task_id in to_kill:
-            del self._active[task_id]
+        for (task_id, rep) in to_kill:
+            del self._active[(task_id, rep)]
 
     def _handle_message(self, msg: dict[str, Any]):
         """
@@ -188,26 +211,27 @@ class RuntimeManager:
             message (Dict[str, Any]): the message being sent by the subprocess to be logged
         """
         task_id = msg['task_id']
+        repetition = msg['repetition']
         log = msg["to_log"]
 
         match msg["kind"]:
             case "task_finished":
                 if msg["success"]:
-                    logger.info(f"Task: {task_id:03d} completed successfully!")
+                    logger.info(f"Task: {task_id:03d}.{repetition} completed successfully!")
                 else: 
                     err = log["error"]
-                    logger.info(f"Task: {task_id:03d} completed exectution with following errors:\n {err} ")
+                    logger.info(f"Task: {task_id:03d}.{repetition} completed exectution with following errors:\n {err}")
             case "killed":
-                logger.info(f"Task: {task_id:03d} reaped. Killed by timeout.")
+                logger.info(f"Task: {task_id:03d}.{repetition} reaped. Killed by timeout.")
             case _: 
-                logger.info(f"Task: {task_id:03d} finished with undefined state...")
+                logger.info(f"Task: {task_id:03d}.{repetition} finished with undefined state...")
 
 
         with open(self.shared_results_jsonl, "a") as f:
             f.write(json.dumps(log)+ "\n")
 
         with open(self.run_summary_file, "a") as f:
-            line = f"[{log['status'].upper():9}] task {log['id']:>4}  {log['time_elapsed']:.1f}s"
+            line = f"[{log['status'].upper():9}] task {log['id']:>4}.{repetition}  {log['time_elapsed']:.1f}s"
             if log["status"] == "success":
                 checks = log.get('checks', [])
                 passed = sum(int(check['passed']) for check in checks)

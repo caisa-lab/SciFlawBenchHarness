@@ -34,7 +34,7 @@ class WrappedModel(Model):
         note that this will try to save only message deltas on each run
         """
         new_messages = messages[self._last_logged_len:]
-        self._last_logged_length = len(messages)
+        self._last_logged_len = len(messages)
         kwargs["start_payload"] = {
                 "new_messages": new_messages, 
                 "message_count": len(messages),

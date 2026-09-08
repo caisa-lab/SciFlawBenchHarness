@@ -15,7 +15,9 @@ logger = logging.getLogger(__file__)
               help="specify the path to the configuration directory")
 @click.option('dry', '--dry', is_flag=True, required=False,
               help="Show the fully specified configuration that is being run with without actually running the test")
-def main(config, dry):
+@click.option('show_trace', '--show_trace', is_flag=True, required=False,
+              help="Determines if An extra directory should be generated for each task with markdowns of the traces")
+def main(config, dry, show_trace):
     """
     entry point for running the actual benchmark with a specific config file  
     """
@@ -24,13 +26,14 @@ def main(config, dry):
     with open(conf_path) as f:
         raw = json.load(f)
 
+    if show_trace: 
+        raw["generate_trace_reports"]=True
+
     try: 
         conf = RunConfig(**raw)
     except ValidationError as e:
         logger.error(f"invalid configuration provided: {e}")
         raise
-
-
     
     if not dry:
         manager = RuntimeManager(conf)

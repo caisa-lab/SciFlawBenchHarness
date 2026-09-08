@@ -15,7 +15,8 @@ src/
 │   └── tasks.py                # definition for task primiteves and contains teh run_task function used for actual task runs
 ├── agents/
 │   ├── prompts/
-│   │   └── default.yaml        # defailt prompt associated wiht default agent
+│   │   ├── code_agent.yaml        # default prompt associated with coding agent
+│   │   └── tool_agent.yaml        # default prompt associated with tool calling agent
 │   ├── prompts.py              # right now just containes a load prompt file
 │   ├── definitions.py          # definitions of base agents to be used in testing and agent registry
 │   └── base.py                 # contains build_agent function
@@ -26,32 +27,105 @@ src/
 ├── models/
 │   └── base.py                 # defines how to build a model and model wrapper
 ├── tools/
-│   ├── custom.py               # custom tool classes that get registered
+│   ├── misc.py                 # miscellaneous custom tool classes that get registered
 │   ├── definitions.py          # all custom tool definitions and wrapper/registry definiotion for use in pipeline
+│   ├── searchtools.py          # contains the searchtools available to the agents: (arxiv, SerpAPI, wikipedia)
 │   └── base.py                 # containes wrapper for use on all tools 
 └── main.py                     # main entrypoint for running testing harness
 ```
 
 ## How to use
 
-1. clone the repository and cd in
-```bash 
-git clone git@github.com:ivzx04/SciFlawBenchHarness.git && cd SciFlawBenchHarness
-```
-2. Create a virtual environment for this project and enter the environment(optional)
-```bash
-python -m venv <name-of-your-venv>  && source <name-of-your-venv>/bin/activate
-```
-3. pip install the enviornment and dependencies
-```bash 
-pip install .
-```
-4. Write the config file in config.json with your specific model access credentials/settings
-5. export the api key environment variables associated with your model providers
-6. run src/main.py with your config path
+### Installation
+
+### Installing through pip
+    1. clone the repository and cd in
+    ```bash 
+    git clone git@github.com:ivzx04/SciFlawBenchHarness.git && cd SciFlawBenchHarness
+    ```
+    2. Create a virtual environment for this project and enter the environment (optional)
+    ```bash
+    python -m venv <name-of-your-venv>  && source <name-of-your-venv>/bin/activate
+    ```
+    3. pip install the enviornment and dependencies
+    ```bash 
+    pip install .
+    ```
+
+### Installing with uv
+    1. clone the repository and cd in
+    ```bash 
+    git clone git@github.com:ivzx04/SciFlawBenchHarness.git && cd SciFlawBenchHarness
+    ```
+    2. install the required packages
+    ```bash 
+    uv run pip install .
+    ```
+
+### Configuring the benchmark
+1. Write the config file in config.json with your specific model access credentials/settings
+
+     - The config struct roughly corresponds to the following:
+        a. Configurations for the entire run 
+
+        ```python
+        class RunConfig(BaseModel):
+            """
+            class which stores all the information needed to provision a benchmark run (also gets read from the config)
+            """
+            model: ModelConfig
+            task_file: Path 
+            tool_configs: list[ToolDef] = Field(default_factory=list)
+            log_path: Path = Path("logs/")
+            max_concurrent: int = 4         # default max concurrent task running processes
+
+            repititions_per_task: int=3
+            logging_level: int = 20
+            task_timeout_s: int = 60 * 15 # 15 minute timeout for tasks before they get killed by the runtime manager
+            restarting: bool | None = None  # if you want to restearting on a specific dir specify the path and set to True
+        ```
+
+        b. Configurations for the Model
+
+        ```python
+
+        class ModelConfig(BaseModel):
+            """
+            class which stores all the information needed to provision a model (gets read from the config)
+
+            also acts as a typing mechanism thoruhg pydantic to verify things were correctly specified
+            """
+            provider: Literal["litellm", "openai_server", "hf_api", "fake_model"]
+            model_id: str
+            api_key_env: str
+            api_base: str | None = None
+            extra_kwargs: dict = Field(default_factory=dict)
+
+            # this is kept in the model config because it generally is a model dependant field to be configured
+            code_block_tags: tuple[str,str] | None = None
+
+            _api_key: str = PrivateAttr() # populated via environment using api_key_env
+        ```
+        
+        c. Tool definitions that modify base tool behaviour for the entire run (kwargs vary by tool, passed in through the tool_configs in [1]): 
+        ```python
+        class ToolDef(BaseModel):
+            tool_name: str
+            kwargs: dict = Field(default_factory=dict)
+        ```
+
+    - tool overrides modify the behaviour of the tool for the entirety of the run for all agents 
+    - all of these BaseModel classes correspond directly to writeable json which should hopefully help for understanding how things can be expressed
+
+2. export the api key environment variables associated with your model providers
+
+3. run src/main.py with your config path
 ```bash
 python src/main.py --config /path/to/your/config
 ```
+
+4. (hint) You can see all the configurations for your run without actually running the benchmark by using the --dry flag
+
 
 ## Check out our Google Colab from which you can run this as well
 

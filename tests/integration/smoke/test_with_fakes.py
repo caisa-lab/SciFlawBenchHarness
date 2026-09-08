@@ -25,7 +25,8 @@ def test_run_fake_task(tmp_path, monkeypatch):
             extra_kwargs={"responses": ["final_answer('done')"]},
         ),
         task_file = task_file,
-        log_path = tmp_path / "logs"
+        log_path = tmp_path / "logs",
+        repetitions_per_task = 1
     )
 
 
@@ -39,7 +40,7 @@ def test_run_fake_task(tmp_path, monkeypatch):
 
     run_task(taskdef, conf, log_path, queue)
 
-    data = json.loads((log_path / f"{taskdef.task_id:03d}.json").read_text())
+    data = json.loads((log_path / f"{taskdef.task_id:03d}.jsonl").read_text())
 
     print(data["error"])
     assert data["success"] is True
@@ -63,11 +64,12 @@ def test_single_task_pipeline(tmp_path, monkeypatch):
         log_path=tmp_path / "logs",
         restarting=True,
         max_concurrent=2,
+        repetitions_per_task=1
     )
 
     RuntimeManager(conf).run()
 
-    data = json.loads((tmp_path / "logs" / "001.json").read_text())
+    data = json.loads((tmp_path / "logs" / "001.jsonl").read_text().strip())
     print(data["error"])
     assert data["success"] is True
 
@@ -90,12 +92,13 @@ def test_full_pipeline(tmp_path, monkeypatch):
         log_path=tmp_path / "logs",
         restarting=True,
         max_concurrent=2,
+        repetitions_per_task=1
     )
 
     RuntimeManager(conf).run()
 
     for task_id in (1, 2):
-        data = json.loads((tmp_path / "logs" / f"{task_id:03d}.json").read_text())
+        data = json.loads((tmp_path / "logs" / f"{task_id:03d}.jsonl").read_text())
         print(data["error"])
         assert data["success"] is True
 
@@ -124,12 +127,13 @@ def test_pipeline_with_pressure(tmp_path, monkeypatch):
         log_path=tmp_path / "logs",
         restarting=True,
         max_concurrent=4,
+        repetitions_per_task=1
     )
 
     RuntimeManager(conf).run()
 
     for task_id in (1, 2,3,4,5,6,7):
-        data = json.loads((tmp_path / "logs" / f"{task_id:03d}.json").read_text())
+        data = json.loads((tmp_path / "logs" / f"{task_id:03d}.jsonl").read_text())
         print(data["error"])
         assert data["success"] is True
 
@@ -151,12 +155,13 @@ def test_success_task_writes_result_and_summary(tmp_path, monkeypatch):
         log_path=tmp_path / "logs",
         restarting=True,
         max_concurrent=4,
-        task_timeout_s=1
+        task_timeout_s=1,
+        repetitions_per_task=1
     )
 
     RuntimeManager(conf).run()
 
-    result = json.loads((tmp_path / "logs" / "001.json").read_text())
+    result = json.loads((tmp_path / "logs" / "001.jsonl").read_text())
     assert result["success"] is True
 
     summary_lines = (tmp_path / "logs" / "aggregate_results.jsonl").read_text().strip().splitlines()
@@ -186,7 +191,8 @@ def test_timedout_tasks(tmp_path, monkeypatch):
         log_path=tmp_path / "logs",
         restarting=True,
         max_concurrent=4,
-        task_timeout_s=3
+        task_timeout_s=3,
+        repetitions_per_task=1
     )
 
     RuntimeManager(conf).run()

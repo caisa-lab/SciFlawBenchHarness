@@ -1,6 +1,8 @@
 
 import json
 import re
+from pathlib import Path
+from typing import Any
 
 TOOL_ICONS = {
     "web_search": "🔍",
@@ -110,9 +112,7 @@ def get_preview(tool, text):
     return f"{preview}{details}"
 
 
-def save_markdown_report(json_path, output_path):
-    with open(json_path, encoding="utf-8") as f:
-        data = json.load(f)
+def save_markdown_report(data: dict[str, Any], output_path: Path):
 
     # Top summary section
     trace, tokens, duration = extract_concise_trace(data.get("full_trace", []))
