@@ -15,7 +15,7 @@ logger = logging.getLogger()
 
 @tool_registry.register("web_search")
 def make_web_search_tool(watcher, max_results:int=8, rate_limit:float =1.0, engine:str="duckduckgo")-> WrappedTool:
-    if os.environ["SERPAPI_KEY"] is not None and engine != "duckduckgo":
+    if os.environ.get("SERPAPI_KEY", None) is not None and engine != "duckduckgo":
         key = os.environ["SERPAPI_KEY"]
         kwargs = {
                 "max_results": 8,
