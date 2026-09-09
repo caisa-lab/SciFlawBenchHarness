@@ -48,6 +48,7 @@ def numeric_within_range(got: str, minimum: float, maximum: float, index: int = 
     passed = got_val <= maximum and got_val >= minimum
     return VerificationResult(passed=passed, details=f"Got value: {got_val} minimum: {minimum} and maximum: {maximum}")
 
+
 @verifier_registry.register("content:paper_json_match")
 def paper_list_match(got: str, expected: list[dict], match_mode: str = "all") -> VerificationResult:
     try:
@@ -68,6 +69,71 @@ def paper_list_match(got: str, expected: list[dict], match_mode: str = "all") ->
     passed = expected_ids.issubset(got_ids) if match_mode == "all" else len(matched) > 0
 
     return VerificationResult(passed=passed, details=f"matched {len(matched)}/{len(expected_ids)} expected papers")
+
+
+import math
+
+_SCI_RE = re.compile(
+    r"(?P<coeff>-?\d+\.?\d*)\s*(?:[eE](?P<exp1>[+-]?\d+)|[x×]\s*10\s*\^?\s*(?P<exp2>[+-]?\d+))"
+)
+
+
+def _extract_scientific_values(text: str) -> list[float]:
+    """Finds values written as '6.022e23', '6.022E+23', '6.022 x 10^23',
+    or '6.022 × 10^23' — in order of appearance."""
+    values = []
+    for m in _SCI_RE.finditer(text):
+        coeff = float(m.group("coeff"))
+        exp = m.group("exp1") or m.group("exp2")
+        values.append(coeff * (10 ** int(exp)))
+    return values
+
+
+def _round_sig_figs(x: float, sig: int) -> float:
+    if x == 0:
+        return 0.0
+    return round(x, -int(math.floor(math.log10(abs(x)))) + (sig - 1))
+
+
+@verifier_registry.register("content:scientific_notation")
+def scientific_notation_numeric(
+    got: str,
+    expected: str,
+    rel_tol: float = 0.01,
+    sig_figs: int | None = None,
+    index: int = -1,
+) -> VerificationResult:
+    got_values = _extract_scientific_values(got)
+    if not got_values:
+        return VerificationResult(passed=False, details=f"No scientific-notation value found in output - Got: {got}")
+    try:
+        got_val = got_values[index]
+    except IndexError:
+        return VerificationResult(
+            passed=False,
+            details=f"Index {index} out of range for {len(got_values)} scientific-notation values found in: {got}",
+        )
+
+    expected_values = _extract_scientific_values(expected)
+    if expected_values:
+        expected_val = expected_values[0]
+    else:
+        try:
+            expected_val = float(expected)   # allow plain-float expected values too, e.g. "6.022e23" written as-is
+        except ValueError:
+            return VerificationResult(passed=False, details=f"Expected value could not be parsed: {expected!r}")
+
+    if sig_figs is not None:
+        passed = _round_sig_figs(got_val, sig_figs) == _round_sig_figs(expected_val, sig_figs)
+        details = f"Got: {got_val:.4e} Expected: {expected_val:.4e} (compared at {sig_figs} sig figs)"
+    else:
+        bound = abs(expected_val) * rel_tol
+        diff = abs(got_val - expected_val)
+        passed = diff <= bound
+        details = f"Got: {got_val:.4e} Expected: {expected_val:.4e} diff: {diff:.4e} rel_tol: {rel_tol}"
+
+    return VerificationResult(passed=passed, details=details)
+
 
 @verifier_registry.register("format:json_output")
 def json_output(got: str) -> VerificationResult:
