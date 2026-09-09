@@ -1,26 +1,25 @@
-# project modules
 import json
 import logging
 import multiprocessing as mp
-
-# stdlib
 import os
 import queue as q
 import time
 from pathlib import Path
 from typing import Any
 
-# pip installed
-from core.config import RunConfig
+from core.config import ModelConfig, RunConfig
 from core.tasks import TaskDef, run_task
 
-mp.set_start_method("spawn", force=True) # IMPORTANT: this means it will not just fork the process, which means slightly
-                                         # slower start times but ultimately saves from pain when it comes to possible 
-                                         # deadlocks with open file descriptors and networking (although im willing to 
-                                         # remove if we promise to be careful about not doing any of that stuff with 
-                                         # the main process)
+mp.set_start_method(
+    "spawn", force=True
+)  # IMPORTANT: this means it will not just fork the process, which means slightly
+# slower start times but ultimately saves from pain when it comes to possible
+# deadlocks with open file descriptors and networking (although im willing to
+# remove if we promise to be careful about not doing any of that stuff with
+# the main process)
 
 logger = logging.getLogger(__file__)
+
 
 class RuntimeManager:
     """
@@ -28,16 +27,21 @@ class RuntimeManager:
     configured mainly through the config.json file that holds all the necessary information needed to provision a test
     """
 
+    full_conf: RunConfig
+    model_conf: ModelConfig
+    ...
+
     def __init__(self, conf: RunConfig):
+        # TODO: set attributes at the top as well for easier IDE navigation
         self.full_conf = conf
 
         logging.basicConfig(level=conf.logging_level)
-        logger.info("Initailizing runtime manager for current run")
+        logger.info("Initializing runtime manager for current run")
         self.model_conf = conf.model
 
         if conf.restarting:
             self.log_path = conf.log_path
-        else: 
+        else:
             self.log_path = conf.log_path / time.strftime("%Y-%m-%d %H:%M:%S")
 
         self.task_file = conf.task_file
@@ -52,10 +56,10 @@ class RuntimeManager:
         self.run_summary_file = self.log_path / "run_summary.log"
 
         self._result_queue = mp.Queue()
-        self._active: dict[tuple[int,int], dict] = {} 
+        self._active: dict[tuple[int, int], dict] = {}  # TODO: make this a data model?
         self._pending = self.load_tasks()
         logger.info("Runtime manager initialized")
-    
+
     def load_tasks(self) -> list[TaskDef]:
         """
         This method loads all of the yet to be completed logs in single run of the harness according to the files in the
@@ -64,7 +68,7 @@ class RuntimeManager:
         Returns: a list of task definitions (see tasks.py for implementation details) that are read from the task file
         specified through the configuration file
         """
-        already_done = self.load_completed()
+        completed = self.load_completed()
         pending = []
 
         with open(self.task_file) as f:
@@ -72,18 +76,17 @@ class RuntimeManager:
                 line = raw_line.strip()
                 if not line:
                     continue
-                try: 
+                try:
                     task = TaskDef(**json.loads(line))
                 except Exception as e:
                     logger.error(f"Failed to load task on line {line_num + 1}: got the following error: {e}")
                     exit(1)
 
                 for i in range(1, self.repetitions + 1):
-                    if (task.task_id, i) not in already_done:
+                    if (task.task_id, i) not in completed:
                         task.repetition = i
                         pending.append(task.model_copy())
         return pending
-
 
     def load_completed(self) -> set[tuple[int, int]]:
         """
@@ -99,7 +102,7 @@ class RuntimeManager:
             return res
 
         for p in res_dir.glob("*.jsonl"):
-            try: 
+            try:
                 int(p.stem)
             except Exception:
                 continue
@@ -113,25 +116,22 @@ class RuntimeManager:
     def run(self) -> None:
         """
         This function starts the main loop that launches subprocesses to run tasks. it will try to launch subprocesses
-        until its less than the current maximum concurrent and while there are still tasks to be run (in pending).
+        until it's less than the current maximum concurrent and while there are still tasks to be run (in pending).
         """
 
-        while self._pending or self._active: 
-            while self._pending and len(self._active) < self.max_concurrent: 
+        while self._pending or self._active:
+            while self._pending and len(self._active) < self.max_concurrent:
                 task = self._pending.pop(0)
-                repitition = task.repetition
+                repetition = task.repetition
                 proc = self._spawn_task(
-                        task = task,
-                        conf = self.full_conf,
-                        log_path = self.log_path,
-                        res_queue = self._result_queue
-                        )
+                    task=task, conf=self.full_conf, log_path=self.log_path, res_queue=self._result_queue
+                )
 
-                self._active[(task.task_id, repitition)] = {"proc": proc, "started": time.time()}
+                self._active[(task.task_id, repetition)] = {"proc": proc, "started": time.time()}
 
                 if self.repetitions <= 1:
                     logger.info(f"Task id - ({task.task_id:03d}) started")
-                else: 
+                else:
                     logger.info(f"Task id - ({task.task_id:03d}.{task.repetition}) started")
 
             self._drain_results()
@@ -141,24 +141,31 @@ class RuntimeManager:
 
     def _spawn_task(self, task: TaskDef, conf: RunConfig, log_path: Path, res_queue: mp.Queue) -> mp.Process:
         """
-        simply spawns a subprocess which actually runs the task with the agent setup and model configuraion specified 
+        simply spawns a subprocess which actually runs the task with the agent setup and model configuration specified
 
-        Args: 
-            task (TaskDef): defintion of the task (includes the agentic preset to be run)
-            model_conf (ModelConfig): configuration struct containing what is needed to provision a fresh model
+        Args:
+            task (TaskDef): definition of the task (includes the agentic preset to be run)
+            conf (ModelConfig): configuration struct containing what is needed to provision a fresh model
             log_path (Path): path to the directory containing completed log files
             res_queue (mp.Queue): queue used to track state of active processes and when they finish
 
-        Returns (mp.Process): a process class handler class which will be tracked through the _active queue 
+        Returns (mp.Process): a process class handler class which will be tracked through the _active queue
         """
-        p = mp.Process(target=run_task, args=(task, conf, log_path, res_queue,))
+        p = mp.Process(
+            target=run_task,
+            args=(
+                task,
+                conf,
+                log_path,
+                res_queue,
+            ),
+        )
         p.start()
         return p
 
-
-    def _drain_results(self, timeout:float = 3.0):
+    def _drain_results(self, timeout: float = 3.0):
         """
-        Function run at the end of the spawning loop which basically just checks for finished processes and reaps them 
+        Function run at the end of the spawning loop which basically just checks for finished processes and reaps them
         upon having completed. Adding important results to the shared results file
 
         Args:
@@ -179,62 +186,60 @@ class RuntimeManager:
 
         self._handle_message(msg)
 
-
-    def _check_timeouts(self): 
+    def _check_timeouts(self):
         """
-        Another function run at the end of the spanwing loop which basically just checks the active processes and kills
-        them if they dont complete in the specified amount of seconds. For the moment this waits 15 minutes on any given
-        process but this can be configured fairly easily if we find that we need different time scales
+        Another function run at the end of the spawning loop which basically just checks the active processes and kills
+        them if they don't complete in the specified amount of seconds. For the moment this waits 15 minutes on any
+        given process but this can be configured fairly easily if we find that we need different time scales
         """
         now = time.time()
         to_kill: list[tuple[int, int]] = []
 
         for (task_id, repitition), entry in self._active.items():
-            if now - entry['started'] > self.task_timeout_s:
-                entry['proc'].terminate()
-                entry['proc'].join(timeout=10) # 10 seconds for the process to clean up after itself 
-                if entry['proc'].is_alive():
-                    entry['proc'].kill()
-                    entry['proc'].join(timeout=5)
+            if now - entry["started"] > self.task_timeout_s:
+                entry["proc"].terminate()
+                entry["proc"].join(timeout=10)  # 10 seconds for the process to clean up after itself
+                if entry["proc"].is_alive():
+                    entry["proc"].kill()
+                    entry["proc"].join(timeout=5)
                 to_kill.append((task_id, repitition))
                 logger.info(f"Task: {task_id:03d}.{repitition} timed out...")
 
         # update dictionary state associated with killed tasks
-        for (task_id, rep) in to_kill:
+        for task_id, rep in to_kill:
             del self._active[(task_id, rep)]
 
     def _handle_message(self, msg: dict[str, Any]):
         """
-        takes a message in and handles logging according to what the message content is 
+        takes a message in and handles logging according to what the message content is
 
         Args:
-            message (Dict[str, Any]): the message being sent by the subprocess to be logged
+            msg (Dict[str, Any]): the message being sent by the subprocess to be logged
         """
-        task_id = msg['task_id']
-        repetition = msg['repetition']
+        task_id = msg["task_id"]
+        repetition = msg["repetition"]
         log = msg["to_log"]
 
         match msg["kind"]:
             case "task_finished":
                 if msg["success"]:
                     logger.info(f"Task: {task_id:03d}.{repetition} completed successfully!")
-                else: 
+                else:
                     err = log["error"]
-                    logger.info(f"Task: {task_id:03d}.{repetition} completed exectution with following errors:\n {err}")
+                    logger.info(f"Task: {task_id:03d}.{repetition} completed execution with following errors:\n {err}")
             case "killed":
                 logger.info(f"Task: {task_id:03d}.{repetition} reaped. Killed by timeout.")
-            case _: 
+            case _:
                 logger.info(f"Task: {task_id:03d}.{repetition} finished with undefined state...")
 
-
         with open(self.shared_results_jsonl, "a") as f:
-            f.write(json.dumps(log)+ "\n")
+            f.write(json.dumps(log) + "\n")
 
         with open(self.run_summary_file, "a") as f:
             line = f"[{log['status'].upper():9}] task {log['id']:>4}.{repetition}  {log['time_elapsed']:.1f}s"
             if log["status"] == "success":
-                checks = log.get('checks', [])
-                passed = sum(int(check['passed']) for check in checks)
+                checks = log.get("checks", [])
+                passed = sum(int(check["passed"]) for check in checks)
                 line += f"  Checks:     {passed}/{len(checks)}"
             else:
                 line += f"  Last Event: {log.get('last_event', '')}"
@@ -242,12 +247,12 @@ class RuntimeManager:
 
     def _drain_remaining(self):
         """
-        This function runs after the main loop has been completed and handles draining 
-        any remaining results in the result queue (eg. handling logging task info)
+        This function runs after the main loop has been completed and handles draining
+        any remaining results in the result queue (e.g. handling logging task info)
         """
 
-        while True: 
-            try: 
+        while True:
+            try:
                 msg = self._result_queue.get(timeout=3.0)
             except q.Empty:
                 break

@@ -1,4 +1,3 @@
-
 import json
 import re
 from pathlib import Path
@@ -97,9 +96,7 @@ def get_preview(tool, text):
         urls = [f"{u.rstrip('/')}" for u in re.findall(pattern, str(text or ""))]
         preview = "**URLs Found:**\n" + ", ".join(urls) + "\n\n" if urls else ""
     if "visit" in tool and text:
-        first_lines = "\n> ".join(
-            [line.strip() for line in text.split("\n") if line.strip()][:5]
-        )
+        first_lines = "\n> ".join([line.strip() for line in text.split("\n") if line.strip()][:5])
         preview = f"**Snippet**\n> {first_lines}...\n\n"
 
     details = (
@@ -158,13 +155,9 @@ def save_markdown_report(data: dict[str, Any], output_path: Path):
             tool = step.get("tool_name", "Tool")
             inputs = json.dumps(step.get("inputs", {}), indent=2)
             result = step.get("result", "")
-            output_section = f"**Output:** `{result}`\n" if tool == "calculator" else  get_preview(tool, result)
+            output_section = f"**Output:** `{result}`\n" if tool == "calculator" else get_preview(tool, result)
 
-            block = (
-                f"\n> **Tool Call:** `{tool}`\n\n"
-                f">`{inputs}`\n\n"
-                f"{output_section}"
-            )
+            block = f"\n> **Tool Call:** `{tool}`\n\n" f">`{inputs}`\n\n" f"{output_section}"
             md_lines.append(block)
 
     with open(output_path, "w", encoding="utf-8") as f:

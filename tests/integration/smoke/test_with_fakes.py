@@ -1,8 +1,6 @@
 import json
 import multiprocessing as mp
 
-import tests.fakes.presets
-import tests.fakes.tools
 from core.config import ModelConfig, RunConfig
 from core.manager import RuntimeManager
 from core.tasks import TaskDef, run_task
@@ -15,21 +13,19 @@ def setup_basics(tmp_path, monkeypatch):
 def test_run_fake_task(tmp_path, monkeypatch):
     setup_basics(tmp_path, monkeypatch)
     task_file = tmp_path / "tasks.jsonl"
-    task_file.write_text(
-        '{"task_id": 1, "task": "say hi", "agent_id": "fake_agent", "tools": ["fake_search"]}\n'
-    )
+    task_file.write_text('{"task_id": 1, "task": "say hi", "agent_id": "fake_agent", "tools": ["fake_search"]}\n')
 
     conf = RunConfig(
         model=ModelConfig(
-            provider="fake_model", model_id="fake", api_key_env="FAKE_KEY",
+            provider="fake_model",
+            model_id="fake",
+            api_key_env="FAKE_KEY",
             extra_kwargs={"responses": ["final_answer('done')"]},
         ),
-        task_file = task_file,
-        log_path = tmp_path / "logs",
-        repetitions_per_task = 1
+        task_file=task_file,
+        log_path=tmp_path / "logs",
+        repetitions_per_task=1,
     )
-
-
 
     with open(task_file) as f:
         raw_task = json.load(f)
@@ -51,20 +47,20 @@ def test_single_task_pipeline(tmp_path, monkeypatch):
     monkeypatch.setenv("ENABLE_TEST_FAKES", "1")
 
     task_file = tmp_path / "tasks.jsonl"
-    task_file.write_text(
-        '{"task_id": 1, "task": "say hi", "agent_id": "fake_agent", "tools": ["fake_search"]}\n'
-    )
+    task_file.write_text('{"task_id": 1, "task": "say hi", "agent_id": "fake_agent", "tools": ["fake_search"]}\n')
 
     conf = RunConfig(
         model=ModelConfig(
-            provider="fake_model", model_id="fake", api_key_env="FAKE_KEY",
+            provider="fake_model",
+            model_id="fake",
+            api_key_env="FAKE_KEY",
             extra_kwargs={"responses": ["final_answer('done')"]},
         ),
         task_file=task_file,
         log_path=tmp_path / "logs",
         restarting=True,
         max_concurrent=2,
-        repetitions_per_task=1
+        repetitions_per_task=1,
     )
 
     RuntimeManager(conf).run()
@@ -72,6 +68,7 @@ def test_single_task_pipeline(tmp_path, monkeypatch):
     data = json.loads((tmp_path / "logs" / "001.jsonl").read_text().strip())
     print(data["error"])
     assert data["success"] is True
+
 
 def test_full_pipeline(tmp_path, monkeypatch):
     setup_basics(tmp_path, monkeypatch)
@@ -85,14 +82,16 @@ def test_full_pipeline(tmp_path, monkeypatch):
 
     conf = RunConfig(
         model=ModelConfig(
-            provider="fake_model", model_id="fake", api_key_env="FAKE_KEY",
+            provider="fake_model",
+            model_id="fake",
+            api_key_env="FAKE_KEY",
             extra_kwargs={"responses": ["final_answer('done')"]},
         ),
         task_file=task_file,
         log_path=tmp_path / "logs",
         restarting=True,
         max_concurrent=2,
-        repetitions_per_task=1
+        repetitions_per_task=1,
     )
 
     RuntimeManager(conf).run()
@@ -120,22 +119,25 @@ def test_pipeline_with_pressure(tmp_path, monkeypatch):
 
     conf = RunConfig(
         model=ModelConfig(
-            provider="fake_model", model_id="fake", api_key_env="FAKE_KEY",
+            provider="fake_model",
+            model_id="fake",
+            api_key_env="FAKE_KEY",
             extra_kwargs={"responses": ["final_answer('done')"]},
         ),
         task_file=task_file,
         log_path=tmp_path / "logs",
         restarting=True,
         max_concurrent=4,
-        repetitions_per_task=1
+        repetitions_per_task=1,
     )
 
     RuntimeManager(conf).run()
 
-    for task_id in (1, 2,3,4,5,6,7):
+    for task_id in (1, 2, 3, 4, 5, 6, 7):
         data = json.loads((tmp_path / "logs" / f"{task_id:03d}.jsonl").read_text())
         print(data["error"])
         assert data["success"] is True
+
 
 def test_success_task_writes_result_and_summary(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_KEY", "x")
@@ -144,11 +146,13 @@ def test_success_task_writes_result_and_summary(tmp_path, monkeypatch):
     task_file = tmp_path / "tasks.jsonl"
     task_file.write_text(
         '{"task_id": 1, "task": "say hi", "agent_id": "fake_agent"}\n',
-        )
+    )
 
     conf = RunConfig(
         model=ModelConfig(
-            provider="fake_model", model_id="fake", api_key_env="FAKE_KEY",
+            provider="fake_model",
+            model_id="fake",
+            api_key_env="FAKE_KEY",
             extra_kwargs={"responses": ["""```python\nfinal_answer("hi")\n```"""]},
         ),
         task_file=task_file,
@@ -156,7 +160,7 @@ def test_success_task_writes_result_and_summary(tmp_path, monkeypatch):
         restarting=True,
         max_concurrent=4,
         task_timeout_s=1,
-        repetitions_per_task=1
+        repetitions_per_task=1,
     )
 
     RuntimeManager(conf).run()
@@ -170,21 +174,22 @@ def test_success_task_writes_result_and_summary(tmp_path, monkeypatch):
     assert entry["id"] == 1
     assert entry["status"] == "success"
     assert entry["time_elapsed"]
-    assert entry["error"] == '' 
+    assert entry["error"] == ""
     assert entry["checks"] == []
+
 
 def test_timedout_tasks(tmp_path, monkeypatch):
     setup_basics(tmp_path, monkeypatch)
     monkeypatch.setenv("ENABLE_TEST_FAKES", "1")
 
     task_file = tmp_path / "tasks.jsonl"
-    task_file.write_text(
-        '{"task_id": 1, "task": "hang too long", "agent_id": "fake_agent" }\n'
-    )
+    task_file.write_text('{"task_id": 1, "task": "hang too long", "agent_id": "fake_agent" }\n')
 
     conf = RunConfig(
         model=ModelConfig(
-            provider="fake_model", model_id="fake", api_key_env="FAKE_KEY",
+            provider="fake_model",
+            model_id="fake",
+            api_key_env="FAKE_KEY",
             extra_kwargs={"responses": ["thanks for bearing with the wait"], "timeout": 99.0},
         ),
         task_file=task_file,
@@ -192,7 +197,7 @@ def test_timedout_tasks(tmp_path, monkeypatch):
         restarting=True,
         max_concurrent=4,
         task_timeout_s=3,
-        repetitions_per_task=1
+        repetitions_per_task=1,
     )
 
     RuntimeManager(conf).run()

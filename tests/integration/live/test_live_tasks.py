@@ -9,26 +9,21 @@ from core.tasks import TaskDef, run_task
 
 
 @pytest.mark.live
-@pytest.mark.skipif(
-        not os.environ.get("OPENROUTER_API_KEY"),
-        reason="an api key is required to hit the real api"
-        )
+@pytest.mark.skipif(not os.environ.get("OPENROUTER_API_KEY"), reason="an api key is required to hit the real api")
 def test_run_task_with_real_openrouter_ai_agent(tmp_path):
     task_file = tmp_path / "tasks.jsonl"
-    task_file.write_text(
-    '''{
-        "task_id": 1, 
-        "task": "What year was the Eiffel Tower completed, and who was the chief engineer credited with the project?", 
+    task_file.write_text("""{
+        "task_id": 1,
+        "task": "What year was the Eiffel Tower completed, and who was the chief engineer credited with the project?",
         "agent_id": "code_agent"
-    }'''
-    )
+    }""")
 
     conf = RunConfig(
         model=ModelConfig(
             provider="litellm", model_id="openrouter/qwen/qwen3.7-flash", api_key_env="OPENROUTER_API_KEY"
-            ),
-        task_file = task_file,
-        log_path = tmp_path / "logs"
+        ),
+        task_file=task_file,
+        log_path=tmp_path / "logs",
     )
 
     with open(task_file) as f:

@@ -13,9 +13,10 @@ EXAMPLE_TASK1_STRING = '{"task_id": 1,  \
 EXAMPLE_TASK2_STRING = '{"task_id": 2,  \
                             "task": "research tomatoes for me and provide 5 facts with sources", \
                             "agent_id": "code_agent" \
-                        }' 
+                        }'
 
-def make_run_config(tmp_path: Path, task_file_content: str, timeout_s = 15 * 60) -> RunConfig:
+
+def make_run_config(tmp_path: Path, task_file_content: str, timeout_s=15 * 60) -> RunConfig:
     task_file = tmp_path / "tasks.jsonl"
     task_file.write_text(task_file_content)
     return RunConfig(
@@ -25,12 +26,13 @@ def make_run_config(tmp_path: Path, task_file_content: str, timeout_s = 15 * 60)
         restarting=True,
         max_concurrent=2,
         repetitions_per_task=1,
-        task_timeout_s=timeout_s
+        task_timeout_s=timeout_s,
     )
+
 
 def test_load_tasks_parses_all_lines(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_KEY", "x")
-    conf = make_run_config(tmp_path, f'{EXAMPLE_TASK1_STRING}\n{EXAMPLE_TASK2_STRING}\n')
+    conf = make_run_config(tmp_path, f"{EXAMPLE_TASK1_STRING}\n{EXAMPLE_TASK2_STRING}\n")
     manager = RuntimeManager(conf)
 
     assert [(t.task_id, t.repetition) for t in manager._pending] == [(1, 1), (2, 1)]
@@ -38,7 +40,7 @@ def test_load_tasks_parses_all_lines(tmp_path, monkeypatch):
 
 def test_load_tasks_skips_blank_lines(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_KEY", "x")
-    conf = make_run_config(tmp_path, f'{EXAMPLE_TASK1_STRING}\n\n\n{EXAMPLE_TASK2_STRING}\n')
+    conf = make_run_config(tmp_path, f"{EXAMPLE_TASK1_STRING}\n\n\n{EXAMPLE_TASK2_STRING}\n")
     manager = RuntimeManager(conf)
 
     assert len(manager._pending) == 2
@@ -46,7 +48,7 @@ def test_load_tasks_skips_blank_lines(tmp_path, monkeypatch):
 
 def test_load_tasks_excludes_already_completed(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_KEY", "x")
-    conf = make_run_config(tmp_path, f'{EXAMPLE_TASK1_STRING}\n{EXAMPLE_TASK2_STRING}\n')
+    conf = make_run_config(tmp_path, f"{EXAMPLE_TASK1_STRING}\n{EXAMPLE_TASK2_STRING}\n")
 
     results_dir = conf.log_path / "results"
     results_dir.mkdir(parents=True)
@@ -58,9 +60,10 @@ def test_load_tasks_excludes_already_completed(tmp_path, monkeypatch):
 
     assert [(t.task_id, t.repetition) for t in manager._pending] == [(2, 1)]
 
+
 def test_load_completed_returns_empty_set_when_no_results_dir(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_KEY", "x")
-    conf = make_run_config(tmp_path, f'{EXAMPLE_TASK1_STRING}\n')
+    conf = make_run_config(tmp_path, f"{EXAMPLE_TASK1_STRING}\n")
     manager = RuntimeManager(conf)
 
     assert manager.load_completed() == set()
@@ -68,7 +71,7 @@ def test_load_completed_returns_empty_set_when_no_results_dir(tmp_path, monkeypa
 
 def test_load_completed_reads_task_ids_from_result_filenames(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_KEY", "x")
-    conf = make_run_config(tmp_path, f'{EXAMPLE_TASK1_STRING}\n')
+    conf = make_run_config(tmp_path, f"{EXAMPLE_TASK1_STRING}\n")
 
     results_dir = conf.log_path / "results"
     results_dir.mkdir(parents=True)
@@ -77,17 +80,25 @@ def test_load_completed_reads_task_ids_from_result_filenames(tmp_path, monkeypat
 
     manager = RuntimeManager(conf)
 
-    assert manager.load_completed() == {(1, 1), (2,1)}
+    assert manager.load_completed() == {(1, 1), (2, 1)}
+
 
 def test_drain_results_frees_active_slot(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_KEY", "x")
-    conf = make_run_config(tmp_path, f'{EXAMPLE_TASK1_STRING}\n')
+    conf = make_run_config(tmp_path, f"{EXAMPLE_TASK1_STRING}\n")
     manager = RuntimeManager(conf)
 
     fake_proc = MagicMock()
     manager._active[(1, 1)] = {"proc": fake_proc, "started": time.time()}
-    manager._result_queue.put({"task_id": 1, "repetition": 1, "kind": "task_finished","success": True, 
-                               "to_log": {"id": 1,  "status": "success", "time_elapsed": 0}})
+    manager._result_queue.put(
+        {
+            "task_id": 1,
+            "repetition": 1,
+            "kind": "task_finished",
+            "success": True,
+            "to_log": {"id": 1, "status": "success", "time_elapsed": 0},
+        }
+    )
 
     manager._drain_results(timeout=1.0)
 
@@ -97,10 +108,9 @@ def test_drain_results_frees_active_slot(tmp_path, monkeypatch):
 
 def test_drain_results_returns_on_empty_queue_without_blocking_forever(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_KEY", "x")
-    conf = make_run_config(tmp_path, f'{EXAMPLE_TASK1_STRING}\n')
+    conf = make_run_config(tmp_path, f"{EXAMPLE_TASK1_STRING}\n")
     manager = RuntimeManager(conf)
 
-    manager._drain_results(timeout=0.1)   # nothing on queue — should return promptly, not hang
+    manager._drain_results(timeout=0.1)  # nothing on queue — should return promptly, not hang
 
     assert manager._active == {}
-

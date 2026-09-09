@@ -6,15 +6,18 @@ from evaluation.base import VerificationResult
 
 verifier_registry = Registry("verifiers")
 
+
 @verifier_registry.register("content:contains_str")
 def contains_str(got: str, expected: str, case_sensitive: bool = False) -> VerificationResult:
     passed = expected in got if case_sensitive else expected.lower() in got.lower()
-    return VerificationResult(passed = passed, details=f"Got: {got} Expected: {expected}")
+    return VerificationResult(passed=passed, details=f"Got: {got} Expected: {expected}")
+
 
 @verifier_registry.register("content:exact_str_match")
 def exact_str_match(got: str, expected: str, case_sensitive: bool = False) -> VerificationResult:
     passed = expected.strip() == got.strip() if case_sensitive else expected.strip().lower() == got.strip().lower()
-    return VerificationResult(passed = passed, details=f"Got: {got} Expected: {expected}")
+    return VerificationResult(passed=passed, details=f"Got: {got} Expected: {expected}")
+
 
 @verifier_registry.register("content:numeric_match")
 def single_numeric_match(got: str, expected: str, tol: float = 0.0, index: int = -1) -> VerificationResult:
@@ -32,8 +35,9 @@ def single_numeric_match(got: str, expected: str, tol: float = 0.0, index: int =
         return VerificationResult(passed=False, details=f"Expected value: {expected} is not a numeric type")
 
     passed = abs(got_val - expected_val) <= tol
-    return VerificationResult(passed = passed, details=f"Expected value: {expected_val} Got value: {got_val} diff \
-            {abs(got_val - expected_val)} and tol: {tol}" )
+    return VerificationResult(passed=passed, details=f"Expected value: {expected_val} Got value: {got_val} diff \
+            {abs(got_val - expected_val)} and tol: {tol}")
+
 
 @verifier_registry.register("content:numeric_within_range")
 def numeric_within_range(got: str, minimum: float, maximum: float, index: int = -1) -> VerificationResult:
@@ -50,14 +54,16 @@ def numeric_within_range(got: str, minimum: float, maximum: float, index: int = 
 
 
 @verifier_registry.register("content:paper_json_match")
-def paper_list_match(got: str, expected: list[dict], match_mode: str = "all") -> VerificationResult:
+def paper_list_match(
+    got: str, expected: list[dict], match_mode: str = "all"
+) -> VerificationResult:  # TODO: make match_mode an StrEnum or give literal type hints
     try:
         parsed = json.loads(got)
         papers = parsed.get("papers", [])
     except (json.JSONDecodeError, AttributeError):
         return VerificationResult(passed=False, details="could not parse 'papers' field from output")
 
-    got_ids = {p.get("arxiv_id", "")  for p in papers if isinstance(p, dict)}
+    got_ids = {p.get("arxiv_id", "") for p in papers if isinstance(p, dict)}
     expected_ids = {p["arxiv_id"] for p in expected}
 
     if not expected_ids:
@@ -73,9 +79,7 @@ def paper_list_match(got: str, expected: list[dict], match_mode: str = "all") ->
 
 import math
 
-_SCI_RE = re.compile(
-    r"(?P<coeff>-?\d+\.?\d*)\s*(?:[eE](?P<exp1>[+-]?\d+)|[x×]\s*10\s*\^?\s*(?P<exp2>[+-]?\d+))"
-)
+_SCI_RE = re.compile(r"(?P<coeff>-?\d+\.?\d*)\s*(?:[eE](?P<exp1>[+-]?\d+)|[x×]\s*10\s*\^?\s*(?P<exp2>[+-]?\d+))")
 
 
 def _extract_scientific_values(text: str) -> list[float]:
@@ -119,7 +123,7 @@ def scientific_notation_numeric(
         expected_val = expected_values[0]
     else:
         try:
-            expected_val = float(expected)   # allow plain-float expected values too, e.g. "6.022e23" written as-is
+            expected_val = float(expected)  # allow plain-float expected values too, e.g. "6.022e23" written as-is
         except ValueError:
             return VerificationResult(passed=False, details=f"Expected value could not be parsed: {expected!r}")
 

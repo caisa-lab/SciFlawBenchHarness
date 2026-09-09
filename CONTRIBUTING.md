@@ -2,51 +2,51 @@
 
 Thank you for taking the time to contribute to our project!
 
-## developer Setup 
+## developer Setup
 
-Follow the instructions in the README to get the repository running on your machine. 
+Follow the instructions in the README to get the repository running on your machine.
 
-For developer packages to be added as well, make sure to 
+For developer packages to be added as well, make sure to
 
 ```bash
-pip install ."[dev]" 
+pip install ."[dev]"
 ```
 
 from whatever environment manager you are using instead of just using '.'
 
 
-## Issues and discussions 
+## Issues and discussions
 
 For any bugs or general fixes to the harness itself, make sure to check the issues section. If you see any open issues related to what you are suggesting, upvote that issue and perhaps add a comment under this issue for further clarification on your specific perspective on the isssue. Otherwhise, open a new issue according to our templates to specify what needs to be fixed or added.
 
-For additional feature requests, please put these under the discussions section before opening a related issue so that maintainers can have a dialogue about implementation before they are fully done. 
+For additional feature requests, please put these under the discussions section before opening a related issue so that maintainers can have a dialogue about implementation before they are fully done.
 
 
-## Style considerations 
+## Style considerations
 
-Ruff linting and formatting has been setup on the repository so please try and match things according to that. to check if your code is in compliance before making a commit simply run the following: 
+Ruff linting and formatting has been setup on the repository so please try and match things according to that. to check if your code is in compliance before making a commit simply run the following:
     ```bash
     ruff check .
     ```
 Ensure that there are no errors before a commit is made
 
-For docstrings, the following style is preferred: 
+For docstrings, the following style is preferred:
 
     ```python
     """
     <description>
 
-    Args: 
+    Args:
         <arg1_name> (<arg1_type>): ...
         <arg2_name> (<arg2_type>): ...
         ...
 
-    Returns (<return_type>): ...  
+    Returns (<return_type>): ...
 
     """
     ```
 
-On the commit messages, try to preface the message with one of the following tags: 
+On the commit messages, try to preface the message with one of the following tags:
     a) "Fix": fix for unintended or innefficient behaviour,
     b) "Feat": New feature or added functioniality,
     c) "Breaking": Break to the previous api such that downstream users may need to update their configurations
@@ -56,7 +56,7 @@ On the commit messages, try to preface the message with one of the following tag
 This project uses pytest as the platform on which tests are written. once the environment is sourced, running the test
 suite can be accomplished with the following command:  `pytest`
 
-To run a specific test file that you may be developing it is also possible to specify by using: 
+To run a specific test file that you may be developing it is also possible to specify by using:
 
 ```python
 pytest /path/to/your/file <options>

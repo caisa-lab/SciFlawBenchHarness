@@ -7,6 +7,7 @@ def test_simple_calculation():
     result = calc.forward("10 + 10")
     assert result == "20"
 
+
 def test_simple_integral():
     calc = CalculatorTool()
 
@@ -14,15 +15,17 @@ def test_simple_integral():
 
     assert result == "1/3"
 
-def test_cpu_timeout(): # try to overrun cpu time
+
+def test_cpu_timeout():  # try to overrun cpu time
     calc = CalculatorTool()
 
     expr = "factor(expand((x+1)**200 - (x-1)**200))"
     result = calc.forward(expr)
 
-    assert result.startswith("Error:") 
+    assert result.startswith("Error:")
 
-def test_memory_exhaustion(): # try to overrun memory
+
+def test_memory_exhaustion():  # try to overrun memory
     calc = CalculatorTool()
 
     expr = "expand((x + y + z + w)**50)"
@@ -30,11 +33,10 @@ def test_memory_exhaustion(): # try to overrun memory
 
     assert result.startswith("Error:")
 
+
 def test_malformed_input():
     calc = CalculatorTool()
 
     result = calc.forward("2 + + + / nonsense((")
 
     assert result.startswith("Error:")
-
-

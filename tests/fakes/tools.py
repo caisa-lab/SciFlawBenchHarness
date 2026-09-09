@@ -14,6 +14,4 @@ class FakeSearchTool(Tool):
         return f"fake results for: {query}"
 
 
-tool_registry.register("fake_search")(
-    lambda watcher: WrappedTool(wrapped_tool=FakeSearchTool(), watcher=watcher)
-)
+tool_registry.register("fake_search")(lambda watcher: WrappedTool(wrapped_tool=FakeSearchTool(), watcher=watcher))
