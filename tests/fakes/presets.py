@@ -4,7 +4,7 @@ from agents.base import AgentDef, agent_registry
 
 FAKE_AGENT = AgentDef(
     name="fake_agent",
-    prompt_path=Path("prompts/code_agent.yaml"),   # reuse a real prompt template — no need to fake this too
+    prompt_path=Path("prompts/code_agent.yaml"),  # reuse a real prompt template — no need to fake this too
     tools=["fake_search"],
     agent_type="code",
     max_steps=2,

@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from typing import Callable
 
 from pydantic import BaseModel, Field
 
@@ -7,9 +7,11 @@ class VerificationResult(BaseModel):
     passed: bool
     details: str
 
+
 class VerifierDef(BaseModel):
     name: str
     kwargs: dict = Field(default_factory=dict)
+
 
 def run_check(f: Callable, got: str, **kwargs) -> VerificationResult:
     try:

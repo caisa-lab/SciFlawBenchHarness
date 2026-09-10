@@ -12,8 +12,9 @@ class ModelConfig(BaseModel):
     """
     class which stores all the information needed to provision a model (gets read from the config)
 
-    also acts as a typing mechanism thoruhg pydantic to verify things were correctly specified
+    also acts as a typing mechanism through pydantic to verify things were correctly specified
     """
+
     provider: Literal["litellm", "openai_server", "hf_api", "fake_model"]
     model_id: str
     api_key_env: str
@@ -21,18 +22,18 @@ class ModelConfig(BaseModel):
     extra_kwargs: dict = Field(default_factory=dict)
 
     # this is kept in the model config because it generally is a model dependant field to be configured
-    code_block_tags: tuple[str,str] | None = None
+    code_block_tags: tuple[str, str] | None = None
 
     _api_key: str = PrivateAttr()
 
     @model_validator(mode="after")
     def resolve_api_key(self) -> "ModelConfig":
         """
-        Function to get the api_key from the enviornment (needs api_key_env to be speciifed in the config)
+        Function to get the api_key from the environment (needs api_key_env to be specified in the config)
         """
         load_dotenv()
         value = os.environ.get(self.api_key_env)
-        if not value: 
+        if not value:
             raise ValueError(f"Env var '{self.api_key_env}' is not set")
         self._api_key = value
         return self
@@ -40,7 +41,7 @@ class ModelConfig(BaseModel):
     @property
     def api_key(self) -> str:
         """
-        Method to expose the api key parameter throgh code to classes that have the model config
+        Method to expose the api key parameter through code to classes that have the model config
 
         Returns (str): the raw api_key
         """
@@ -51,18 +52,18 @@ class RunConfig(BaseModel):
     """
     class which stores all the information needed to provision a benchmark run (also gets read from the config)
     """
+
     model: ModelConfig
-    task_file: Path 
+    task_file: Path
     tool_configs: list[ToolDef] = Field(default_factory=list)
     log_path: Path = Path("logs/")
-    max_concurrent: int = 3         # default max concurrent task running processes
+    max_concurrent: int = 3  # default max concurrent task running processes
 
-    repetitions_per_task: int=3
+    repetitions_per_task: int = 3
     logging_level: int = 20
-    task_timeout_s: int = 60 * 15 # 15 minute timeout for tasks before they get killed by the runtime manager
-    restarting: bool | None = None  # if you want to restearting on a specific dir specify the path and set to True
-    generate_trace_reports: bool=False
-
+    task_timeout_s: int = 60 * 15  # 15 minute timeout for tasks before they get killed by the runtime manager
+    restarting: bool = False  # if you want to restart on a specific dir specify the log_path and set to True
+    generate_trace_reports: bool = False
 
     @field_validator("task_file")
     @classmethod

@@ -3,7 +3,8 @@ from typing import TypeVar
 
 T = TypeVar("T")
 
-class Registry[T]: 
+
+class Registry[T]:
     """
     Class made for ease of building predefined instances of things like our tools or agentic setups
     (see the implementation in action in a tool definitions file or in agents/definitions to understand how to use it)
@@ -12,27 +13,29 @@ class Registry[T]:
 
     def __init__(self, kind: str):
         self._kind = kind
-        self._entries:  dict[str, Callable[..., T]] = {}
+        self._entries: dict[str, Callable[..., T]] = {}
 
     def register(self, name: str):
         """
         This can be called either as a decorator or with another function wrapped around it to basically register a
-        single string and how to build the object we want associated with it easily 
+        single string and how to build the object we want associated with it easily
 
-        Args: 
+        Args:
             name (str): string associated with the object type that will be built
         """
+
         def _decorator(factory: Callable[..., T]) -> Callable[..., T]:
             if name in self._entries:
                 raise ValueError(f"{self._kind}: '{name}' is already registered")
             self._entries[name] = factory
             return factory
+
         return _decorator
 
-    def get(self, name:str) -> Callable[..., T]:
+    def get(self, name: str) -> Callable[..., T]:
         """
-        Returns the factory function needed to build the instance of the object associate diwth this type (probably
-        shouldnt be called directly)
+        Returns the factory function needed to build the instance of the object associated with this type (probably
+        shouldn't be called directly)
 
         Args:
             name (str): the name associated with the object instance / type being built
@@ -51,7 +54,7 @@ class Registry[T]:
             name (str): name associated with the object instance / type being built
             kwargs (dict): keyword arguments to be passed into the factory function that builds the type instance
 
-        Returns (T): The instance of 
+        Returns (T): The instance of
 
         """
         return self.get(name)(**kwargs)

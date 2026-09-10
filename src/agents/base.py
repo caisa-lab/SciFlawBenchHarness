@@ -17,26 +17,29 @@ class BuiltAgent:
     class that just holds all of the information about a provisioned agent / agentic system for ease of passing around
     later
     """
+
     watcher: EventWatcher
     agent: CodeAgent | ToolCallingAgent
     definition: AgentDef
 
+
 # TODO: make this thing work for multi agent setups via specifying children and parents
 def build_agent(
-        agent_id: str, 
-        model_conf: ModelConfig, 
-        watcher: EventWatcher, 
-        tool_overrides: dict[str, ToolDef],
-        extra_tools: list[ToolDef | str],
-        ) -> BuiltAgent:
+    agent_id: str,
+    model_conf: ModelConfig,
+    watcher: EventWatcher,
+    tool_overrides: dict[str, ToolDef],
+    extra_tools: list[ToolDef | str],
+) -> BuiltAgent:
     """
     builds an agent from the specified agent_id and model conf along with the associated watcher class
-    note this builds all of its tools and its model configuration here 
+    note this builds all of its tools and its model configuration here
 
     Args:
-        agent_id (str): string specifying the agent / agentic setup to be built 
+        agent_id (str): string specifying the agent / agentic setup to be built
         model_conf (ModelConfig): description of what is needed to build the model associated with this agent
-        watcher (EventWatcher): the watcher associated with this agent, its model instancce and its tools
+        watcher (EventWatcher): the watcher associated with this agent, its model instance and its tools
+        TODO: add tool_overrides to docstring with explanation
         extra_tools (List[ToolDef | str]): definition of extra_tools to be passed on a task basis
 
     """
@@ -44,32 +47,34 @@ def build_agent(
     definition = agent_registry.create(agent_id)
     prompts = load_prompt_templates(definition.prompt_path)
     overrides = resolve_tools(definition.tools, tool_overrides)
-    tools = [tool_registry.create(t.tool_name, watcher=watcher, **t.kwargs) for t in overrides + extra_tools] 
+    tools = [tool_registry.create(t.tool_name, watcher=watcher, **t.kwargs) for t in overrides + extra_tools]
 
+    # TODO: for indentations, we can also use pre-commit with black, I can set that up
+    # TODO: make this an elif with else for raise ValueError in case agent_type is neither code nor search
     if definition.agent_type == "code":
         kwargs = {}
         if model_conf.code_block_tags is not None:
             kwargs["code_block_tags"] = model_conf.code_block_tags
 
         agent = CodeAgent(
-                tools=tools, 
-                model=model,
-                prompt_templates=prompts, 
-                max_steps=definition.max_steps, 
-                verbosity_level=LogLevel.OFF,
-                **kwargs
-                )
+            tools=tools,
+            model=model,
+            prompt_templates=prompts,
+            max_steps=definition.max_steps,
+            verbosity_level=LogLevel.OFF,
+            **kwargs,
+        )
     else:
         agent = ToolCallingAgent(
-                tools=tools, 
-                model=model,
-                prompt_templates=prompts, 
-                max_steps=definition.max_steps, 
-                verbosity_level=LogLevel.OFF
-                )
+            tools=tools,
+            model=model,
+            prompt_templates=prompts,
+            max_steps=definition.max_steps,
+            verbosity_level=LogLevel.OFF,
+        )
 
     return BuiltAgent(
-            watcher=watcher,
-            agent=agent,
-            definition=definition,
-            )
+        watcher=watcher,
+        agent=agent,
+        definition=definition,
+    )

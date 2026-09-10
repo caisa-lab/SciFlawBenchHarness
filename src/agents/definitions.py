@@ -8,11 +8,13 @@ from tools.base import ToolDef
 
 agent_registry = Registry("agent_descriptions")
 
+
 class AgentDef(BaseModel):
     """
     Holds the necessary information to provision an agent and is sourced from one of our presets specified as a task
     config
     """
+
     name: str
     prompt_path: Path
     tools: list[ToolDef | str]
@@ -28,20 +30,21 @@ class AgentDef(BaseModel):
             return v
         return [{"tool_name": t} if isinstance(t, str) else t for t in v]
 
+
 # default agent definitions
 DEFAULT_CODING_AGENT = AgentDef(
-            name = "default code agent",
-            prompt_path = Path("prompts/code_agent.yaml"),
-            tools = ["web_search", "wikipedia_search", "visit_webpage", "calculator", "current_time", "arxiv_search"],
-            agent_type = "code"
-            )
+    name="default code agent",
+    prompt_path=Path("prompts/code_agent.yaml"),
+    tools=["web_search", "wikipedia_search", "visit_webpage", "calculator", "current_time", "arxiv_search"],
+    agent_type="code",
+)
 
 DEFAULT_TOOL_AGENT = AgentDef(
-            name = "default tool agent",
-            prompt_path = Path("prompts/tool_agent.yaml"),
-            tools = ["web_search", "wikipedia_search", "visit_webpage", "calculator", "current_time", "arxiv_search"],
-            agent_type = "tool"
-            )
+    name="default tool agent",
+    prompt_path=Path("prompts/tool_agent.yaml"),
+    tools=["web_search", "wikipedia_search", "visit_webpage", "calculator", "current_time", "arxiv_search"],
+    agent_type="tool",
+)
 
 agent_registry.register("code_agent")(lambda: DEFAULT_CODING_AGENT)
 agent_registry.register("tool_agent")(lambda: DEFAULT_TOOL_AGENT)

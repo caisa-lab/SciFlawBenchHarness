@@ -4,14 +4,12 @@ from tools.base import ToolDef, resolve_tools
 def test_tool_override_logic():
 
     Tools = [
-            ToolDef(tool_name="web_search"),
-            ToolDef(tool_name="calculator"),
-            ToolDef(tool_name="wiki_search"),
-            ]
+        ToolDef(tool_name="web_search"),
+        ToolDef(tool_name="calculator"),
+        ToolDef(tool_name="wiki_search"),
+    ]
 
-    overrides = {
-            "web_search": ToolDef(tool_name="web_search", kwargs = {"test_kwarg": "test string"})
-            }
+    overrides = {"web_search": ToolDef(tool_name="web_search", kwargs={"test_kwarg": "test string"})}
 
     resolve_tools(Tools, overrides)
 
@@ -23,5 +21,3 @@ def test_tool_override_logic():
 
     assert Tools[2].tool_name == "wiki_search"
     assert not Tools[2].kwargs
-
-

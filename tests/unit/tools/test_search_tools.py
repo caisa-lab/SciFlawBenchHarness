@@ -2,16 +2,21 @@ import os
 
 import pytest
 
-from tools.searchtools import ArxivSearchTool, ImprovedWikipediaSearchTool, SerpAPISearchTool
+from tools.searchtools import (
+    ArxivSearchTool,
+    ImprovedWikipediaSearchTool,
+    SerpAPISearchTool,
+)
 
 
 def test_simple_wiki_query():
     search_tool = ImprovedWikipediaSearchTool(operator="test_suite")
     res = search_tool.forward(query="Anthropic")
-    print(res) 
+    print(res)
     assert "Anthropic" in res
     assert "Amodei" in res
     assert "founded in January 2021" in res
+
 
 def test_failed_wiki_query():
     search_tool = ImprovedWikipediaSearchTool(operator="test_suite")
@@ -21,20 +26,18 @@ def test_failed_wiki_query():
     assert "Title:" in res
     assert "AI alignment" in res
 
+
 def test_simple_arxiv_query():
     search_tool = ArxivSearchTool(operator="test_suite")
     res = search_tool.forward(query="LLM alignment", sort="relevance", fromYear=2020)
     print(res)
-    assert "article markdown" in res 
-    assert "**title:**" in res 
-    assert "id:" in res 
+    assert "article markdown" in res
+    assert "**title:**" in res
+    assert "id:" in res
 
 
 @pytest.mark.live
-@pytest.mark.skipif(
-        not os.environ.get("SERPAPI_KEY"),
-        reason="an api key is required to hit the real api"
-        )
+@pytest.mark.skipif(not os.environ.get("SERPAPI_KEY"), reason="an api key is required to hit the real api")
 def test_serp_search():
     key = os.environ["SERPAPI_KEY"]
     assert key is not None

@@ -20,26 +20,28 @@ from tools.base import ToolDef
 
 logger = logging.getLogger(__file__)
 
-if os.environ.get("ENABLE_TEST_FAKES")  == "1":
+if os.environ.get("ENABLE_TEST_FAKES") == "1":
     import tests.fakes.presets
     import tests.fakes.tools
 
 
 class TaskDef(BaseModel):
     """
-    Working definition for tasks to be passed through the runtime manager and dispatched to a task runner 
+    Working definition for tasks to be passed through the runtime manager and dispatched to a task runner
     (not necessarily for the evaluator itself)
 
-    TODO: ground truth should be passed through here as well to allow for quantatative checks to be run by the 
-    task runners upon getting the solutionn to be included in the logs
+    TODO: ground truth should be passed through here as well to allow for quantitative checks to be run by the
+    task runners upon getting the solution to be included in the logs
+    TODO: David agrees, maybe also a parser or specifications for universal parsers for quantitative checks
     """
+
     task_id: int
     task: str
     agent_id: str
-    extra_tools: list[ToolDef | str] = Field(default_factory=list)
-    validators: list[VerifierDef] = Field(default_factory=list) 
+    extra_tools: list[ToolDef | str] = Field(default_factory=list)  # TODO: why allow strings?
+    validators: list[VerifierDef] = Field(default_factory=list)
 
-    repetition: int = 1
+    repetition: int = 1  # for multiple runs of the same tasks
 
     @field_validator("extra_tools", mode="before")
     @classmethod
@@ -49,14 +51,14 @@ class TaskDef(BaseModel):
         return [{"tool_name": t} if isinstance(t, str) else t for t in v]
 
 
-
 class TaskResult(BaseModel):
     """
-    Final result that gets dumped into the log file 
+    Final result that gets dumped into the log file
 
-    (FOR NOW: really only gets used in run task but perhaps later we use it for passing around result objects and 
-    unloading the tasks i feel its worth keeping it around)
+    (FOR NOW: really only gets used in run task but perhaps later we use it for passing around result objects and
+    unloading the tasks I feel it's worth keeping it around)
     """
+
     task_id: int
     task: str
     repetition: int
@@ -80,7 +82,7 @@ def run_task(task: TaskDef, run_config: RunConfig, output_dir: Path, res_queue: 
         clean up
 
     """
-    
+
     start_time = time.time()
     events: list[AgentEvent] = []
     watcher = EventWatcher(task_id=task.task_id, sink=events.append)
@@ -90,19 +92,23 @@ def run_task(task: TaskDef, run_config: RunConfig, output_dir: Path, res_queue: 
     to_log = {"id": task.task_id, "task": task.task}
 
     import signal
-    def handle_sigterm(signum, frame): # this function runs if this task ever gets terminated by the manager
-        to_log["last_event"] = dataclasses.asdict(events[-1])
+
+    def handle_sigterm(
+        *args,
+    ):  # this function runs if this task ever gets terminated by the manager  # TODO: unused args?
+        to_log["last_event"] = dataclasses.asdict(events[-1])  # type: ignore
         to_log["status"] = "terminated"
-        to_log["time_elapsed"] = time.time() - start_time
+        to_log["time_elapsed"] = time.time() - start_time  # type: ignore
 
         res_queue.put({"task_id": task.task_id, "repetition": task.repetition, "kind": "killed", "to_log": to_log})
-        try: 
+        try:
             partial_path = output_dir / f"{task.task_id:03d}.partial.json"
             partial_path.write_text(json.dumps([dataclasses.asdict(e) for e in events]))
         except Exception:
             pass
 
         raise SystemExit(1)
+
     signal.signal(signal.SIGTERM, handle_sigterm)
 
     tool_overrides = {t.tool_name: t for t in run_config.tool_configs}
@@ -112,58 +118,56 @@ def run_task(task: TaskDef, run_config: RunConfig, output_dir: Path, res_queue: 
         out = built_agent.watcher("agent", built_agent.definition.name, built_agent.agent.run, task.task)
         success = True
         error_str = ""
-        verifier_results = [run_check(verifier_registry.get(verifier.name), out, **verifier.kwargs) \
-                for verifier in task.validators]
-    except Exception: 
+        verifier_results = [
+            run_check(verifier_registry.get(verifier.name), out, **verifier.kwargs) for verifier in task.validators
+        ]
+    except Exception:
         out = None
         success = False
         error_str = traceback.format_exc()
         verifier_results = []
 
-    
     result = TaskResult(
-            task_id=task.task_id, 
-            repetition = task.repetition,
-            task=task.task, 
-            output=out, 
-            success=success,
-            error=error_str,
-            full_trace=[dataclasses.asdict(event) for event in events],
-            check_results = verifier_results
-            )
-
+        task_id=task.task_id,
+        repetition=task.repetition,
+        task=task.task,
+        output=out,
+        success=success,
+        error=error_str,
+        full_trace=[dataclasses.asdict(event) for event in events],
+        check_results=verifier_results,
+    )
 
     if not output_dir.exists():
         os.mkdir(output_dir)
 
     out_file = output_dir / f"{task.task_id:03d}.jsonl"
 
-    res = result.model_dump()
+    result = result.model_dump()
 
-    with open(out_file, 'a') as f:
-        json.dump(res, f)
+    with open(out_file, "a") as f:
+        json.dump(result, f)
         f.write("\n")
-
 
     to_log["checks"] = [res.model_dump() for res in verifier_results]
     to_log["status"] = "success" if success else "failed"
     to_log["time_elapsed"] = time.time() - start_time
     to_log["error"] = error_str
 
-    res_queue.put({
-        "task_id": task.task_id, 
-        "repetition": task.repetition, 
-        "kind": "task_finished", 
-        "success": success, 
-        "to_log": to_log
-        })
-
+    res_queue.put(
+        {
+            "task_id": task.task_id,
+            "repetition": task.repetition,
+            "kind": "task_finished",
+            "success": success,
+            "to_log": to_log,
+        }
+    )
 
     if run_config.generate_trace_reports:
-        report_dir = output_dir/ f"{task.task_id:03d}_reports/" 
+        report_dir = output_dir / f"{task.task_id:03d}_reports/"
         if not report_dir.exists():
             os.mkdir(report_dir)
 
         report_file = report_dir / f"{task.task_id:03d}.{task.repetition}_report.md"
-        save_markdown_report(res, report_file)
-
+        save_markdown_report(result, report_file)

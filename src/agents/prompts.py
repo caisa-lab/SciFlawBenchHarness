@@ -6,14 +6,14 @@ from smolagents import PromptTemplates
 
 def load_prompt_templates(path: Path) -> PromptTemplates:
     """
-    loads a prompt definiton from yaml into a smolagents PromptTemplate
+    loads a prompt definition from yaml into a smolagents PromptTemplate
 
     Args:
         path (Path): the path to the prompt file (should be in the agents/prompts/ directory)
     """
     base_path = Path(__file__).parent
     full_path = base_path / path
-    
+
     if not full_path.is_file():
         raise FileNotFoundError(
             f"System prompt file not found: {full_path}\n"
@@ -22,5 +22,3 @@ def load_prompt_templates(path: Path) -> PromptTemplates:
     with open(full_path, encoding="utf-8") as f:
         templates = yaml.safe_load(f)
     return templates
-
-

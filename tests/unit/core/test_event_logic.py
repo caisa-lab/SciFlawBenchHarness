@@ -41,6 +41,7 @@ def test_watcher_call_with_fake_tool():
     assert captured[0].payload["kwargs"] == {"query": "python testing"}
     assert captured[1].payload["result"] == "results for: python testing"
 
+
 def test_watcher_call_with_fake_model():
 
     class FakeModel(Model):
@@ -67,11 +68,9 @@ def test_watcher_call_with_fake_model():
     event_types = [e.event_type for e in captured]
     assert event_types == [EventType.ModelCallStart, EventType.ModelCallEnd]
     print(captured)
-    assert captured[0].payload["new_messages"] ==  "python testing"
+    assert captured[0].payload["new_messages"] == "python testing"
     assert captured[1].payload["result"].role == MessageRole.ASSISTANT
     assert captured[1].payload["result"].content == "fake response"
-
-            
 
 
 def test_watcher_records_error_and_reraises():
@@ -83,6 +82,7 @@ def test_watcher_records_error_and_reraises():
         description = "always fails"
         inputs = {}
         output_type = "string"
+
         def forward(self):
             raise ValueError("simulated failure")
 
@@ -93,4 +93,3 @@ def test_watcher_records_error_and_reraises():
 
     assert captured[-1].event_type == EventType.Errored
     assert "simulated failure" in captured[-1].payload["error"]
-
