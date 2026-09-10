@@ -27,6 +27,9 @@ def test_run_fake_task(tmp_path, monkeypatch):
         repetitions_per_task=1,
     )
 
+    import tests.fakes.presets
+    import tests.fakes.tools
+
     with open(task_file) as f:
         raw_task = json.load(f)
         taskdef = TaskDef(**raw_task)

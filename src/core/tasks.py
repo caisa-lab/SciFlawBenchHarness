@@ -21,7 +21,8 @@ from tools.base import ToolDef
 logger = logging.getLogger(__file__)
 
 if os.environ.get("ENABLE_TEST_FAKES") == "1":
-    pass
+    import tests.fakes.presets
+    import tests.fakes.tools
 
 
 class TaskDef(BaseModel):
