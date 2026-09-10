@@ -19,7 +19,7 @@ def test_simple_integral():
 def test_cpu_timeout():  # try to overrun cpu time
     calc = CalculatorTool()
 
-    expr = "factor(expand((x+1)**200 - (x-1)**200))"
+    expr = "factor(expand((x+1)**400 - (x-1)**400))"
     result = calc.forward(expr)
 
     assert result.startswith("Error:")
