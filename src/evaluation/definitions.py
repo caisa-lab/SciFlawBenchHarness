@@ -74,20 +74,33 @@ def paper_list_match(got: str, expected: list[dict], match_mode: str = "all") ->
 import math
 
 _SCI_RE = re.compile(
-    r"(?P<coeff>-?\d+\.?\d*)\s*(?:[eE](?P<exp1>[+-]?\d+)|[x×]\s*10\s*\^?\s*(?P<exp2>[+-]?\d+))"
+    r"""
+    (?<![\w.])                          # not preceded by a word char or dot (avoid grabbing mid-number/mid-identifier)
+    (?P<coeff>-?(?:\d+\.\d*|\.\d+|\d+)) # 6, 6.022, or .5 — decimal point optional on either side
+    \s*
+    (?:
+        [eE](?P<exp1>[+-]?\d+)                          # 6.022e23, 6.022E+23
+      | (?:x|×|\\times|\\cdot)\s*10\s*\^?\s*
+        \{?(?P<exp2>[+-]?\d+)\}?                         # 6.022 x 10^23, \times 10^{-11}, × 10 23
+    )
+    (?![\w.])                            # not immediately followed by a word char or dot
+    """,
+    re.VERBOSE,
 )
+
+_SUPERSCRIPT_MAP = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺", "0123456789-+")
 
 
 def _extract_scientific_values(text: str) -> list[float]:
     """Finds values written as '6.022e23', '6.022E+23', '6.022 x 10^23',
-    or '6.022 × 10^23' — in order of appearance."""
+    '6.022 × 10^23', '6.022 \\times 10^{23}', or '6.022 × 10²³'."""
+    text = text.replace("−", "-").translate(_SUPERSCRIPT_MAP)
     values = []
     for m in _SCI_RE.finditer(text):
         coeff = float(m.group("coeff"))
         exp = m.group("exp1") or m.group("exp2")
         values.append(coeff * (10 ** int(exp)))
     return values
-
 
 def _round_sig_figs(x: float, sig: int) -> float:
     if x == 0:
@@ -104,6 +117,7 @@ def scientific_notation_numeric(
     index: int = -1,
 ) -> VerificationResult:
     got_values = _extract_scientific_values(got)
+    print(got_values)
     if not got_values:
         return VerificationResult(passed=False, details=f"No scientific-notation value found in output - Got: {got}")
     try:
@@ -134,6 +148,21 @@ def scientific_notation_numeric(
 
     return VerificationResult(passed=passed, details=details)
 
+@verifier_registry.register("content:json_output")
+def verify_json_content(got: str, expected: dict) -> VerificationResult:
+
+    try: 
+        got_json = json.loads(got)
+    except json.JSONDecodeError as e:
+        return VerificationResult(passed=False, details=f"Failed to parse got: {got} \n as json: \n{str(e)}")
+
+    for field, value in expected.items():
+        if field not in got_json:
+            return VerificationResult(passed=False, details=f"got: {got}, but expected field {field} is not included")
+        if value != got_json[field]:
+            return VerificationResult(passed=False, 
+            details=f"got: {got}, but field {field} does not match expectation:{value}")
+    return VerificationResult(passed=True, details="Received Valid Json and the expected fields match in value")
 
 @verifier_registry.register("format:json_output")
 def json_output(got: str) -> VerificationResult:
